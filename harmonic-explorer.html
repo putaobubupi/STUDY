@@ -797,7 +797,7 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
   const { c, ctx, w, h } = initCanvas('fourierEpicycleCanvas', 1060, 420);
 
   const EPI_CX = 170, EPI_CY = h/2;
-  const EPI_SCALE = 62;
+  const BASE_SCALE = 62;
   const WX0 = 380, WY = h/2;
   const WW = w - WX0 - 30;
   const MAX_PTS = 480;
@@ -839,6 +839,10 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
     ctx.clearRect(0,0,w,h);
     const amps = getAmps();
 
+    // Auto-scale: shrink when total amplitude is large so circles & waveform always fit
+    const totalAmp = amps.reduce((s, a) => s + Math.abs(a), 0);
+    const scale = Math.min(BASE_SCALE, 155 / Math.max(totalAmp, 0.01));
+
     // Grid: waveform area
     ctx.strokeStyle = 'rgba(26,42,58,0.3)'; ctx.lineWidth = 0.5;
     for (let x = WX0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
@@ -846,12 +850,12 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
 
     // Grid: epicycle area
     ctx.strokeStyle = 'rgba(26,42,58,0.2)';
-    for (let r = EPI_SCALE; r <= EPI_SCALE*2.5; r += EPI_SCALE) {
+    for (let r = scale; r <= scale*2.5; r += scale) {
       ctx.beginPath(); ctx.arc(EPI_CX, EPI_CY, r, 0, Math.PI*2); ctx.stroke();
     }
     ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(EPI_CX-EPI_SCALE*2.5, EPI_CY); ctx.lineTo(EPI_CX+EPI_SCALE*2.5, EPI_CY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(EPI_CX, EPI_CY-EPI_SCALE*2.5); ctx.lineTo(EPI_CX, EPI_CY+EPI_SCALE*2.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(EPI_CX-scale*2.5, EPI_CY); ctx.lineTo(EPI_CX+scale*2.5, EPI_CY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(EPI_CX, EPI_CY-scale*2.5); ctx.lineTo(EPI_CX, EPI_CY+scale*2.5); ctx.stroke();
 
     // Center line for waveform
     ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
@@ -863,8 +867,8 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
       const A = amps[i];
       if (Math.abs(A) < 0.001) continue;
       const angle = orders[i] * t;
-      sumX += A * EPI_SCALE * Math.cos(angle);
-      sumY += A * EPI_SCALE * Math.sin(angle);
+      sumX += A * scale * Math.cos(angle);
+      sumY += A * scale * Math.sin(angle);
     }
 
     // --- Draw epicycles ---
@@ -873,9 +877,9 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
       const A = amps[i];
       if (Math.abs(A) < 0.001) continue;
       const angle = orders[i] * t;
-      const R = Math.abs(A) * EPI_SCALE;
-      const nx = dx + A * EPI_SCALE * Math.cos(angle);
-      const ny = dy + A * EPI_SCALE * Math.sin(angle);
+      const R = Math.abs(A) * scale;
+      const nx = dx + A * scale * Math.cos(angle);
+      const ny = dy + A * scale * Math.sin(angle);
 
       ctx.strokeStyle = colors[i] + '50';
       ctx.lineWidth = 1.2;
@@ -915,7 +919,7 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
     ctx.setLineDash([]);
 
     // Record & draw waveform
-    const normY = (sumY - EPI_CY) / EPI_SCALE;
+    const normY = (sumY - EPI_CY) / scale;
     waveBuf.push(normY);
     if (waveBuf.length > MAX_PTS) waveBuf.shift();
 
@@ -925,7 +929,7 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
       ctx.beginPath();
       for (let i = 0; i < waveBuf.length; i++) {
         const x = WX0 + (i / MAX_PTS) * WW;
-        const y = WY - waveBuf[i] * EPI_SCALE * 0.85;
+        const y = WY - waveBuf[i] * scale * 0.85;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.stroke(); ctx.shadowBlur = 0;
@@ -933,7 +937,7 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
       ctx.beginPath();
       for (let i = 0; i < waveBuf.length; i++) {
         const x = WX0 + (i / MAX_PTS) * WW;
-        const y = WY - waveBuf[i] * EPI_SCALE * 0.85;
+        const y = WY - waveBuf[i] * scale * 0.85;
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       ctx.lineTo(WX0 + WW, WY); ctx.lineTo(WX0, WY); ctx.closePath();
@@ -941,7 +945,7 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
     }
 
     // Current dot on waveform
-    const curY = WY - normY * EPI_SCALE * 0.85;
+    const curY = WY - normY * scale * 0.85;
     ctx.fillStyle = '#FF6F00';
     ctx.shadowBlur = 8; ctx.shadowColor = '#FF6F00';
     ctx.beginPath(); ctx.arc(waveDrawX, curY, 3, 0, Math.PI*2); ctx.fill();
@@ -951,6 +955,12 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
     ctx.fillStyle = C.text; ctx.font = '11px sans-serif';
     ctx.fillText('旋转矢量叠加', EPI_CX-35, 18);
     ctx.fillText('合成波形  (y = Σ Aₙ·sin(nωt))', WX0 + 8, 18);
+
+    // Auto-scale indicator
+    if (scale < BASE_SCALE - 0.5) {
+      ctx.fillStyle = '#FFA726'; ctx.font = '10px sans-serif';
+      ctx.fillText(`自动缩放 ${(scale/BASE_SCALE*100).toFixed(0)}%`, WX0 + 8, 34);
+    }
 
     // Harmonic legend
     let ly = h - 14;
