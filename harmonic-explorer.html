@@ -294,6 +294,50 @@ body {
 .epi-input::-webkit-inner-spin-button { opacity:0.5; }
 .epi-label { font-size:11px; display:block; margin-bottom:2px; }
 
+/* Circuit diagram */
+.circuit-wrap { text-align:center; padding:8px 0; }
+.circuit-wrap canvas { max-width:100%; border-radius:8px; }
+
+/* Two-column layout */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0; }
+.two-col .sub-card {
+  background:rgba(0,0,0,0.2); border:1px solid var(--border);
+  border-radius:12px; padding:16px;
+}
+.two-col .sub-card h4 { font-size:0.95rem; margin-bottom:6px; }
+.two-col .sub-card ul { font-size:0.85rem; color:var(--dim); padding-left:16px; }
+.two-col .sub-card ul li { margin-bottom:4px; }
+
+/* Step list */
+.steps { margin:16px 0; }
+.step-item {
+  display:flex; gap:12px; align-items:flex-start;
+  padding:10px 12px; margin-bottom:6px;
+  background:rgba(0,0,0,0.2); border-radius:8px;
+  border-left:3px solid var(--accent);
+}
+.step-item .num {
+  width:24px; height:24px; border-radius:50%;
+  background:var(--accent); color:#000;
+  font-weight:700; font-size:13px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.step-item .text { font-size:0.9rem; }
+.step-item .text strong { color:var(--accent); }
+
+/* Formula display */
+.formula-box {
+  background:rgba(0,0,0,0.3); border:1px solid var(--border);
+  border-radius:10px; padding:14px 18px; margin:12px 0;
+  font-family:var(--font-mono); font-size:0.95rem;
+  text-align:center; color:var(--orange);
+}
+
+/* Highlight text */
+.highlight { color:var(--accent2); font-weight:600; }
+.dim { color:var(--dim); font-size:0.85rem; }
+
 </style>
 </head>
 <body>
@@ -376,33 +420,126 @@ body {
 <!-- ===== CH2: 波形畸变 ===== -->
 <section class="section" id="ch2">
   <h2 class="section-title">第二章 · 波形变"歪"了</h2>
-  <p class="section-subtitle">同样的正弦电压，不同的负载画出完全不同的电流</p>
+  <p class="section-subtitle">同样的正弦电压，加在不同负载上，电流画出截然不同的波形</p>
 
+  <!-- 对比 -->
   <div class="comparison">
     <div class="comp-box linear">
       <h3>✓ 线性负载</h3>
-      <p style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">电流 ∝ 电压 · 波形完美正弦</p>
+      <p style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">电流 ∝ 电压，波形完美正弦</p>
       <p class="examples">白炽灯 · 电阻炉 · 电热器</p>
       <canvas id="linearCanvas" width="480" height="120"></canvas>
     </div>
     <div class="comp-box nonlinear">
       <h3>✗ 非线性负载</h3>
-      <p style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">电流仅在电压峰值附近脉冲导通</p>
-      <p class="examples">开关电源 · 变频器 · 充电器</p>
+      <p style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">电流集中在电压峰值附近的窄脉冲</p>
+      <p class="examples">开关电源 · 变频器 · 充电器 · LED 驱动</p>
       <canvas id="nonlinearCanvas" width="480" height="120"></canvas>
     </div>
   </div>
 
-  <div class="card" style="border-color:var(--accent2)">
-    <div class="card-title" style="color:var(--accent2)">💡 核心洞察</div>
-    <p>非线性负载内部有整流桥 + 电容。只有当<strong style="color:var(--accent2)">交流电压瞬时值 > 电容电压</strong>时，二极管才导通，出现短促的大电流脉冲。大部分时间电流 = 0。</p>
-    <p style="margin-top:8px;color:var(--orange);">
-      傅里叶变换告诉我们：<strong>脉冲电流 = 基波 + 3次谐波 + 5次谐波 + 7次谐波 + ...</strong>
-    </p>
+  <!-- 拆开看看 -->
+  <div class="card">
+    <div class="card-title">🔍 拆开看看：为什么电流会"断流"？</div>
+    <p>以最常见的<strong style="color:var(--accent)">开关电源前端</strong>为例，它的核心结构是：</p>
+    <div style="text-align:center;font-size:1.1rem;font-family:var(--font-mono);color:var(--accent);padding:6px 0">
+      ～220V AC → 整流桥 → 大电容（≈400V DC）→ 负载
+    </div>
+    <div class="circuit-wrap">
+      <canvas id="circuitCanvas" width="800" height="220"></canvas>
+    </div>
+    <div class="steps">
+      <div class="step-item">
+        <span class="num">①</span>
+        <div class="text">交流电经<strong>整流桥</strong>变成脉动直流，给<strong>大电容</strong>充电</div>
+      </div>
+      <div class="step-item">
+        <span class="num">②</span>
+        <div class="text">电容被充到接近电压峰值（≈ 310V × √2），然后维持这个电压向负载供电</div>
+      </div>
+      <div class="step-item">
+        <span class="num">③</span>
+        <div class="text">电容电压很高 → 只有当<strong style="color:#FF6F00">交流电压瞬时值 > 电容电压</strong>时，整流二极管才<strong style="color:#FF6F00">正向导通</strong>，出现短促的大电流脉冲</div>
+      </div>
+      <div class="step-item">
+        <span class="num">④</span>
+        <div class="text">其余时间二极管反向截止，电流 = 0 —— 电流波形被"切"成了<strong style="color:#FF6F00">一段一段的脉冲</strong></div>
+      </div>
+    </div>
   </div>
 
+  <!-- 导通角 -->
+  <div class="card" style="border-color:var(--accent2)">
+    <div class="card-title" style="color:var(--accent2)">🎚️ 导通角——畸变的"刻度尺"</div>
+    <p>电流只在一周内的一小段流通，这一段的电气角度叫<strong style="color:var(--accent2)">导通角 θ</strong>。</p>
+    <p style="margin-bottom:8px">导通角越<strong>小</strong> → 电流脉冲越<strong>窄</strong> → 波形畸变越<strong>严重</strong> → 谐波含量越<strong>高</strong>！</p>
+
+    <div class="canvas-wrap">
+      <span class="canvas-label">导通角控制 · 拖动滑块观察电流波形和谐波频谱的变化</span>
+      <canvas id="conductionCanvas" width="1060" height="300"></canvas>
+      <div class="controls">
+        <label>导通角</label>
+        <input type="range" id="thetaSlider" min="20" max="180" value="90">
+        <span class="value" id="thetaValue">90°</span>
+        <span style="margin-left:16px;color:var(--dim)">THD:</span>
+        <span style="font-weight:600;font-family:var(--font-mono)" id="conductionThd">28.3%</span>
+        <span style="margin-left:auto;color:var(--dim);font-size:12px">
+          ← 窄脉冲 · 高谐波 <span style="color:var(--text)">|</span> 宽脉冲 · 低谐波 →
+        </span>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:8px">
+      <div class="sub-card" style="border-color:var(--red)">
+        <h4 style="color:var(--red)">小导通角（θ < 60°）</h4>
+        <ul>
+          <li>电流是极窄的尖脉冲</li>
+          <li>谐波含量极高（THD > 80%）</li>
+          <li>典型：轻载开关电源、充电器</li>
+          <li>3次、5次谐波尤为突出</li>
+        </ul>
+      </div>
+      <div class="sub-card" style="border-color:var(--green)">
+        <h4 style="color:var(--green)">大导通角（θ > 120°）</h4>
+        <ul>
+          <li>电流接近正弦波</li>
+          <li>谐波含量较低（THD < 15%）</li>
+          <li>典型：纯电阻负载、PFC 校正电源</li>
+          <li>主要含少量低次谐波</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fourier bridge -->
+  <div class="card" style="border-color:var(--accent)">
+    <div class="card-title" style="color:var(--accent)">🔗 脉冲电流为什么 = 谐波？</div>
+    <p>傅里叶变换告诉我们一个核心结论：</p>
+    <p style="font-size:1.05rem;text-align:center;color:var(--yellow);margin:10px 0">
+      <strong>任何周期性波形 = 基波 + 3次谐波 + 5次谐波 + 7次谐波 + …</strong>
+    </p>
+    <p>上面那个被"切"成一段段的脉冲电流，其实是一大堆正弦波拼出来的：</p>
+
+    <div class="formula-box">
+      i(t) = I₁·sin(ωt) + I₃·sin(3ωt) + I₅·sin(5ωt) + I₇·sin(7ωt) + …
+    </div>
+
+    <p>关键规律：<strong>脉冲越窄，高频谐波的幅度越大！</strong></p>
+    <ul style="margin:8px 0 0 16px;color:var(--dim);font-size:0.9rem">
+      <li>导通角 180°（全导通）= 纯正弦 → <span style="color:var(--green)">无谐波</span></li>
+      <li>导通角 90° = 半波导通 → <span style="color:var(--orange)">3次谐波 ≈ 基波的 30%</span></li>
+      <li>导通角 30° = 极窄脉冲 → <span style="color:var(--red)">3次谐波 ≈ 基波的 60%，5次也有 40%</span></li>
+    </ul>
+    <p style="margin-top:12px">这就是为什么非线性负载 ←→ 谐波，两者几乎绑定在一起。</p>
+  </div>
+
+  <!-- 整流桥导通过程 -->
+  <div class="card">
+    <div class="card-title">⚡ 整流桥实际导通过程</div>
+    <p>下方动画展示了一个完整的交流周期内，<strong style="color:var(--accent2)">黄色高亮区</strong>为二极管导通区间，<strong style="color:#FF6F00">橙色波形</strong>为实际流过的电流。电压仍保持正弦，但电流只剩下几个狭窄的脉冲。</p>
+  </div>
   <div class="canvas-wrap" style="height:200px">
-    <span class="canvas-label">整流桥导通过程 · 黄色 = 导通区间</span>
+    <span class="canvas-label">整流桥导通过程 · 黄色高亮 = 导通区间 · 橙色 = 电流脉冲</span>
     <canvas id="rectifierCanvas" width="1060" height="200"></canvas>
   </div>
 </section>
@@ -1005,6 +1142,17 @@ function drawLinearWave(id, t) {
   }
   ctx.stroke();
   ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(102,187,106,0.1)';
+  ctx.beginPath();
+  for (let x = 0; x < w; x += 2) {
+    const y = cy + amp * Math.sin((x/w)*Math.PI*4 + t);
+    x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.lineTo(w,cy); ctx.lineTo(0,cy); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = '#66BB6A'; ctx.font = '10px sans-serif';
+  ctx.fillText('完美正弦', 20, 20);
 }
 
 function drawNonlinearWave(id, t) {
@@ -1018,7 +1166,6 @@ function drawNonlinearWave(id, t) {
   for (let x = 0; x < w; x += 2) {
     const phase = (x/w)*Math.PI*4 + t;
     const sinVal = Math.sin(phase);
-    // Threshold conduction - only conducts near peaks
     let y;
     if (Math.abs(sinVal) > 0.7) {
       y = cy + amp * 1.3 * sinVal;
@@ -1029,7 +1176,463 @@ function drawNonlinearWave(id, t) {
   }
   ctx.stroke();
   ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#EF5350'; ctx.font = '10px sans-serif';
+  ctx.fillText('脉冲电流', 20, 20);
 }
+
+// ========================================================================
+//  CH2: CIRCUIT DIAGRAM - 单相桥式整流电路
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('circuitCanvas', 800, 220);
+  let t = 0;
+
+  function drawDiode(x, y, angle, color) {
+    // Draw a diode symbol: triangle + line, rotated by 'angle' radians
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    // Triangle (anode side)
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.lineTo(10, -7);
+    ctx.lineTo(10, 7);
+    ctx.closePath();
+    ctx.fillStyle = color + '30';
+    ctx.fill();
+    ctx.stroke();
+    // Vertical line (cathode side)
+    ctx.beginPath();
+    ctx.moveTo(14, -9);
+    ctx.lineTo(14, 9);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function draw() {
+    t += 0.025;
+    ctx.clearRect(0,0,w,h);
+    const cy = h/2;
+    const acInX = 50;
+    const bCx = 200, bCy = cy;   // bridge center
+    const dSize = 25;            // distance from center to each diode
+    const cX = 330;              // capacitor x
+    const lX = 430;              // load x
+
+    // Grid
+    ctx.strokeStyle = 'rgba(26,42,58,0.15)'; ctx.lineWidth = 0.5;
+    for (let x = 0; x <= w; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for (let y = 0; y <= h; y += 30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+
+    // --- AC Source ---
+    ctx.strokeStyle = '#4FC3F7'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(acInX, cy, 20, 0, Math.PI*2); ctx.stroke();
+    // Sine inside circle
+    ctx.beginPath();
+    for (let a = 0; a < Math.PI*2; a += 0.1) {
+      const px = acInX + 10 * Math.sin(a);
+      const py = cy - 8 * Math.sin(a * 2 + t);
+      a===0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#4FC3F7'; ctx.font = '11px sans-serif';
+    ctx.fillText('AC', acInX - 8, cy + 34);
+
+    // --- Wires from AC to bridge ---
+    // Top wire: from AC right side to bridge (D1-D3 junction upper)
+    ctx.strokeStyle = '#667'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(acInX + 20, cy - dSize);
+    ctx.lineTo(bCx - dSize, cy - dSize);
+    ctx.stroke();
+    // Bottom wire: from AC right side to bridge (D1-D3 junction lower)
+    ctx.beginPath();
+    ctx.moveTo(acInX + 20, cy + dSize);
+    ctx.lineTo(bCx - dSize, cy + dSize);
+    ctx.stroke();
+    // Vertical at AC source
+    ctx.beginPath();
+    ctx.moveTo(acInX+20, cy-dSize);
+    ctx.lineTo(acInX+20, cy+dSize);
+    ctx.stroke();
+
+    // --- Bridge diamond ---
+    // Diagonal wires
+    ctx.strokeStyle = '#889'; ctx.lineWidth = 1.5;
+    // D1 arm: from (-dSize, -dSize) to center
+    ctx.beginPath(); ctx.moveTo(bCx - dSize, cy - dSize); ctx.lineTo(bCx, cy); ctx.stroke();
+    // D2 arm: from (+dSize, -dSize) to center
+    ctx.beginPath(); ctx.moveTo(bCx + dSize, cy - dSize); ctx.lineTo(bCx, cy); ctx.stroke();
+    // D3 arm: from (-dSize, +dSize) to center
+    ctx.beginPath(); ctx.moveTo(bCx - dSize, cy + dSize); ctx.lineTo(bCx, cy); ctx.stroke();
+    // D4 arm: from (+dSize, +dSize) to center
+    ctx.beginPath(); ctx.moveTo(bCx + dSize, cy + dSize); ctx.lineTo(bCx, cy); ctx.stroke();
+
+    // --- Diodes (on each arm, oriented correctly) ---
+    const dColor = '#FFA726';
+    // D1: top-left, anode at left, cathode at center → angle = -45° (up-right)
+    drawDiode(bCx - dSize*0.4, cy - dSize*0.4, -Math.PI/4, dColor);
+    ctx.fillStyle = dColor; ctx.font = '10px sans-serif';
+    ctx.fillText('D₁', bCx - dSize - 18, cy - dSize + 4);
+    // D2: top-right, anode at center, cathode at right → angle = 135° (down-right)
+    drawDiode(bCx + dSize*0.4, cy - dSize*0.4, 3*Math.PI/4, dColor);
+    ctx.fillText('D₂', bCx + dSize + 6, cy - dSize + 4);
+    // D3: bottom-left, anode at left, cathode at center → angle = 45° (down-right)
+    drawDiode(bCx - dSize*0.4, cy + dSize*0.4, Math.PI/4, dColor);
+    ctx.fillText('D₃', bCx - dSize - 18, cy + dSize - 2);
+    // D4: bottom-right, anode at center, cathode at right → angle = -135° (up-right)
+    drawDiode(bCx + dSize*0.4, cy + dSize*0.4, -3*Math.PI/4, dColor);
+    ctx.fillText('D₄', bCx + dSize + 6, cy + dSize - 2);
+
+    // --- DC+ bus (top) from bridge right to capacitor and load ---
+    ctx.strokeStyle = '#667'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bCx + dSize, cy - dSize);
+    ctx.lineTo(cX, cy - dSize);
+    ctx.lineTo(cX, cy - dSize - 15);
+    ctx.stroke();
+    // continue to load
+    ctx.beginPath();
+    ctx.moveTo(cX, cy - dSize);
+    ctx.lineTo(lX, cy - dSize);
+    ctx.lineTo(lX, cy - dSize - 15);
+    ctx.stroke();
+    // continue to right edge
+    ctx.beginPath();
+    ctx.moveTo(lX, cy - dSize);
+    ctx.lineTo(w-30, cy - dSize);
+    ctx.stroke();
+
+    // --- DC- bus (bottom) from bridge right to capacitor and load ---
+    ctx.beginPath();
+    ctx.moveTo(bCx + dSize, cy + dSize);
+    ctx.lineTo(cX, cy + dSize);
+    ctx.lineTo(cX, cy + dSize + 15);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cX, cy + dSize);
+    ctx.lineTo(lX, cy + dSize);
+    ctx.lineTo(lX, cy + dSize + 15);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(lX, cy + dSize);
+    ctx.lineTo(w-30, cy + dSize);
+    ctx.stroke();
+
+    // --- Capacitor (C) ---
+    ctx.strokeStyle = '#66BB6A'; ctx.lineWidth = 2.5;
+    const cTopY = cy - dSize - 15;
+    const cBotY = cy + dSize + 15;
+    // Positive plate (top)
+    ctx.beginPath();
+    ctx.moveTo(cX - 12, cTopY);
+    ctx.lineTo(cX + 12, cTopY);
+    ctx.stroke();
+    // Negative plate (bottom)
+    ctx.beginPath();
+    ctx.moveTo(cX - 12, cBotY);
+    ctx.lineTo(cX + 12, cBotY);
+    ctx.stroke();
+    // Polarity
+    ctx.fillStyle = '#66BB6A'; ctx.font = '12px sans-serif';
+    ctx.fillText('+', cX + 16, cTopY + 4);
+    ctx.fillText('−', cX + 16, cBotY + 4);
+    ctx.fillText('C', cX + 20, cy + 4);
+
+    // --- Resistor (R) ---
+    ctx.strokeStyle = '#AB47BC'; ctx.lineWidth = 2;
+    const rTopY = cy - dSize - 15;
+    const rBotY = cy + dSize + 15;
+    // Zigzag
+    const segH = (rBotY - rTopY) / 8;
+    ctx.beginPath();
+    ctx.moveTo(lX, rTopY);
+    for (let i = 0; i < 8; i++) {
+      const dir = (i % 2 === 0) ? 1 : -1;
+      ctx.lineTo(lX + dir * 10, rTopY + (i+1) * segH);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#AB47BC'; ctx.font = '12px sans-serif';
+    ctx.fillText('R 负载', lX + 16, cy + 4);
+
+    // --- DC output label ---
+    ctx.fillStyle = '#66BB6A'; ctx.font = '11px sans-serif';
+    ctx.fillText('≈310V DC', bCx + dSize + 10, cy - dSize - 20);
+
+    // --- Animated current flow ---
+    const phase = t % (Math.PI * 2);
+    const halfCycle = phase < Math.PI;
+    const dotColor = '#FF6F00';
+    ctx.fillStyle = dotColor;
+    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 4);
+
+    // Define current paths for the two half-cycles
+    // Positive half-cycle: AC+ → D1 → DC+ bus → C → R → DC- bus → D4 → AC-
+    // Negative half-cycle: AC- → D2 → DC+ bus → C → R → DC- bus → D3 → AC+
+    const nDots = 18;
+
+    if (halfCycle) {
+      const path = [
+        // AC+ → D1 → DC+ bus
+        [acInX+18, cy-dSize], [bCx-dSize*0.7, cy-dSize*0.7], [bCx, cy],
+        // DC+ bus → C top → R top
+        [bCx+dSize*0.5, cy-dSize*0.7], [bCx+dSize, cy-dSize], [cX-6, cy-dSize], [cX, cy-dSize-15],
+        [lX, cy-dSize-15],
+        // R bottom → DC- bus → D4 → AC-
+        [lX, cy+dSize+15], [cX, cy+dSize+15], [cX+6, cy+dSize],
+        [bCx+dSize, cy+dSize], [bCx+dSize*0.7, cy+dSize*0.7], [bCx, cy],
+        [bCx-dSize*0.5, cy+dSize*0.5], [acInX+18, cy+dSize],
+      ];
+      path.forEach((p, i) => {
+        const offset = (t * 2.5 + i * 0.5) % path.length;
+        const idx = Math.floor(offset);
+        const next = (idx + 1) % path.length;
+        const frac = offset - idx;
+        const px = path[idx][0] + (path[next][0]-path[idx][0])*frac;
+        const py = path[idx][1] + (path[next][1]-path[idx][1])*frac;
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI*2); ctx.fill();
+      });
+      // Highlight D1 and D4 in the bridge
+      ctx.strokeStyle = `rgba(255,111,0,${0.3+0.3*Math.sin(t*3)})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(bCx-dSize, cy-dSize); ctx.lineTo(bCx, cy); ctx.stroke(); // D1
+      ctx.beginPath(); ctx.moveTo(bCx, cy); ctx.lineTo(bCx+dSize, cy+dSize); ctx.stroke(); // D4
+    } else {
+      const path = [
+        // AC- → D2 → DC+ bus
+        [acInX+18, cy+dSize], [bCx-dSize*0.5, cy+dSize*0.5], [bCx, cy],
+        // DC+ bus → C top → R top
+        [bCx+dSize*0.7, cy-dSize*0.7], [bCx+dSize, cy-dSize], [cX-6, cy-dSize], [cX, cy-dSize-15],
+        [lX, cy-dSize-15],
+        // R bottom → DC- bus → D3 → AC+
+        [lX, cy+dSize+15], [cX, cy+dSize+15], [cX+6, cy+dSize],
+        [bCx+dSize, cy+dSize], [bCx+dSize*0.7, cy+dSize*0.7], [bCx, cy],
+        [bCx-dSize*0.5, cy-dSize*0.5], [acInX+18, cy-dSize],
+      ];
+      path.forEach((p, i) => {
+        const offset = (t * 2.5 + i * 0.5) % path.length;
+        const idx = Math.floor(offset);
+        const next = (idx + 1) % path.length;
+        const frac = offset - idx;
+        const px = path[idx][0] + (path[next][0]-path[idx][0])*frac;
+        const py = path[idx][1] + (path[next][1]-path[idx][1])*frac;
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI*2); ctx.fill();
+      });
+      // Highlight D2 and D3
+      ctx.strokeStyle = `rgba(255,111,0,${0.3+0.3*Math.sin(t*3)})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(bCx+dSize, cy-dSize); ctx.lineTo(bCx, cy); ctx.stroke(); // D2
+      ctx.beginPath(); ctx.moveTo(bCx-dSize, cy+dSize); ctx.lineTo(bCx, cy); ctx.stroke(); // D3
+    }
+    ctx.globalAlpha = 1;
+
+    // Half-cycle label
+    ctx.fillStyle = '#8899bb'; ctx.font = '10px sans-serif';
+    ctx.fillText(halfCycle ? '正半周 → D₁ D₄ 导通' : '负半周 → D₂ D₃ 导通', 10, h-10);
+
+    // Legend
+    ctx.fillStyle = '#FF6F00'; ctx.font = '9px sans-serif';
+    ctx.fillText('● 电流路径', w-100, 20);
+    ctx.fillStyle = '#667'; ctx.font = '9px sans-serif';
+    ctx.fillText('○ 导线', w-100, 34);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH2: CONDUCTION ANGLE interactive
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('conductionCanvas', 1060, 300);
+  const slider = document.getElementById('thetaSlider');
+  const valEl = document.getElementById('thetaValue');
+  const thdEl = document.getElementById('conductionThd');
+
+  function getTheta() { return +slider.value; }
+
+  let t = 0;
+  function draw() {
+    t += 0.03;
+    ctx.clearRect(0,0,w,h);
+    const theta = getTheta();
+    valEl.textContent = theta + '°';
+
+    // The conduction threshold: a smaller theta means higher threshold
+    // theta=180->threshold=0, theta=20->threshold~0.98
+    const threshold = Math.cos(theta * Math.PI / 360);
+    const cy = h/2 - 10, amp = 70;
+    const totalPts = w - 40;
+    const x0 = 20;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(26,42,58,0.3)'; ctx.lineWidth = 0.5;
+    for (let x = x0; x <= w-20; x += 50) { ctx.beginPath(); ctx.moveTo(x,10); ctx.lineTo(x,h-10); ctx.stroke(); }
+    for (let y = 10; y < h-10; y += 30) { ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(w-20,y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, cy); ctx.lineTo(w-20, cy); ctx.stroke();
+
+    // Draw voltage sine wave (faint)
+    ctx.strokeStyle = 'rgba(0,188,212,0.15)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let px = 0; px < totalPts; px += 2) {
+      const p = (px/totalPts)*Math.PI*2 + t;
+      const y = cy - amp * Math.sin(p);
+      px===0 ? ctx.moveTo(x0+px, y) : ctx.lineTo(x0+px, y);
+    }
+    ctx.stroke();
+
+    // Conduction angle arc indicator
+    const arcStart = -Math.PI/2 - theta/2 * Math.PI/180;
+    const arcEnd = -Math.PI/2 + theta/2 * Math.PI/180;
+    ctx.strokeStyle = 'rgba(255,238,88,0.3)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.arc(x0, cy, 20, arcStart, arcEnd);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#FFEE58'; ctx.font = '10px sans-serif';
+    const midAngle = (-Math.PI/2);
+    const labelR = 32;
+    ctx.fillText('θ='+theta+'°', x0 + labelR*Math.cos(midAngle) - 15, cy + labelR*Math.sin(midAngle) + 4);
+
+    // Draw conduction zones + current pulse
+    const currentData = [];
+    const harmAmps = [0,0,0,0,0]; // harmonics magnitudes
+
+    for (let px = 0; px < totalPts; px += 2) {
+      const p = (px/totalPts)*Math.PI*2 + t;
+      const sinVal = Math.sin(p);
+      // Check if voltage exceeds threshold (i.e., is in conduction zone)
+      const conducts = Math.abs(sinVal) >= threshold;
+
+      // Conduction zone highlight
+      if (conducts) {
+        ctx.fillStyle = 'rgba(255,111,0,0.08)';
+        ctx.fillRect(x0+px, cy-amp-5, 2, amp*2+10);
+      }
+
+      // Current: follows sine during conduction, zero otherwise
+      let current;
+      if (conducts) {
+        current = (Math.abs(sinVal) - threshold) / (1 - threshold);
+        current = Math.sign(sinVal) * Math.pow(current, 0.6);
+      } else {
+        current = 0;
+      }
+      currentData.push(current);
+    }
+
+    // Draw current waveform
+    ctx.shadowBlur = 10; ctx.shadowColor = '#FF6F00';
+    ctx.strokeStyle = '#FF6F00'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let px = 0; px < currentData.length; px += 2) {
+      const y = cy - currentData[px] * amp;
+      px===0 ? ctx.moveTo(x0+px, y) : ctx.lineTo(x0+px, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Fill below current
+    ctx.beginPath();
+    for (let px = 0; px < currentData.length; px += 2) {
+      const y = cy - currentData[px] * amp;
+      px===0 ? ctx.moveTo(x0+px, y) : ctx.lineTo(x0+px, y);
+    }
+    ctx.lineTo(x0+totalPts, cy); ctx.lineTo(x0, cy); ctx.closePath();
+    ctx.fillStyle = 'rgba(255,111,0,0.06)'; ctx.fill();
+
+    // Compute harmonics via simple FFT approximation (sample at intervals)
+    const N = 200;
+    const samples = [];
+    for (let i = 0; i < N; i++) {
+      const p = (i/N)*Math.PI*2 + t;
+      const sinVal = Math.sin(p);
+      const conducts = Math.abs(sinVal) >= threshold;
+      let cur;
+      if (conducts) {
+        cur = (Math.abs(sinVal) - threshold) / (1 - threshold);
+        cur = Math.sign(sinVal) * Math.pow(cur, 0.6);
+      } else {
+        cur = 0;
+      }
+      samples.push(cur);
+    }
+
+    // Compute fundamental and harmonic amplitudes using discrete Fourier approximation
+    const harmOrders = [1, 3, 5, 7, 9];
+    harmOrders.forEach((h_, hi) => {
+      let re = 0, im = 0;
+      for (let i = 0; i < N; i++) {
+        const angle = 2 * Math.PI * h_ * i / N;
+        re += samples[i] * Math.cos(angle);
+        im += samples[i] * Math.sin(angle);
+      }
+      harmAmps[hi] = Math.sqrt(re*re + im*im) / N * 2;
+    });
+
+    // Normalize to fundamental = 100%
+    const fund = Math.max(harmAmps[0], 0.001);
+    const normAmps = harmAmps.map(a => a / fund);
+
+    // Calculate THD
+    let harmSq = 0;
+    for (let i = 1; i < normAmps.length; i++) harmSq += normAmps[i]*normAmps[i];
+    const thd = Math.sqrt(harmSq) * 100;
+    thdEl.textContent = thd.toFixed(1) + '%';
+    thdEl.style.color = thd < 15 ? '#66BB6A' : thd < 40 ? '#FFA726' : '#EF5350';
+
+    // Draw spectrum bars (right side)
+    const specX = w - 200, specY = 30, specW = 160, specH = h - 80;
+    ctx.fillStyle = 'rgba(10,14,26,0.6)'; ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 1;
+    ctx.fillRect(specX-5, specY-5, specW+10, specH+10);
+    ctx.strokeRect(specX-5, specY-5, specW+10, specH+10);
+
+    ctx.fillStyle = '#8899bb'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('频谱', specX+specW/2, specY+4);
+    ctx.textAlign = 'start';
+
+    const barW = 24, barGap = 6;
+    const maxBarH = specH - 40;
+    const barColors = ['#00BCD4','#EF5350','#66BB6A','#AB47BC','#FFA726'];
+    const barLabels = ['基波','3次','5次','7次','9次'];
+
+    normAmps.forEach((a, i) => {
+      const x = specX + 8 + i*(barW+barGap);
+      const bh = a * maxBarH;
+      ctx.fillStyle = barColors[i];
+      ctx.globalAlpha = 0.6 + 0.4 * a;
+      ctx.fillRect(x, specY+specH-25-bh, barW, Math.max(bh, 1));
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = C.text; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(barLabels[i], x+barW/2, specY+specH-8);
+      if (a > 0.05) {
+        ctx.fillStyle = barColors[i]; ctx.font = '8px sans-serif';
+        ctx.fillText((a*100).toFixed(0)+'%', x+barW/2, specY+specH-28-bh);
+      }
+      ctx.textAlign = 'start';
+    });
+
+    // THD label on spectrum
+    const thdC = thd < 15 ? '#66BB6A' : thd < 40 ? '#FFA726' : '#EF5350';
+    ctx.fillStyle = thdC;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('THD: '+thd.toFixed(1)+'%', specX+specW/2, specY+specH-2);
+    ctx.textAlign = 'start';
+
+    // Labels
+    ctx.fillStyle = C.text; ctx.font = '11px sans-serif';
+    ctx.fillText('电压（青）', 20, 18);
+    ctx.fillStyle = '#FF6F00';
+    ctx.fillText('电流（橙）', 20, 34);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
 
 // ========================================================================
 //  CH2: RECTIFIER conduction animation
@@ -1080,7 +1683,7 @@ function drawNonlinearWave(id, t) {
 
     ctx.fillStyle = '#FF6F00';
     ctx.font = '11px sans-serif';
-    ctx.fillText('← 导通区间（黄色高亮）', 20, 20);
+    ctx.fillText('← 导通区间', 20, 20);
     ctx.fillStyle = C.text;
     ctx.fillText('电流脉冲（橙色）', 20, h-8);
     ctx.fillStyle = 'rgba(0,188,212,0.4)';
