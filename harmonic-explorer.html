@@ -279,6 +279,21 @@ body {
   .section { padding: 50px 16px; }
   #nav a { padding: 16px 10px; font-size: 12px; }
 }
+
+/* Epicycle number inputs */
+.epi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.epi-input {
+  width:100%; padding:4px 6px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:6px; color:var(--text);
+  font-family:var(--font-mono); font-size:13px;
+  text-align:center; outline:none;
+  transition:border-color .25s;
+}
+.epi-input:focus { border-color:var(--accent); }
+.epi-input::-webkit-inner-spin-button { opacity:0.5; }
+.epi-label { font-size:11px; display:block; margin-bottom:2px; }
+
 </style>
 </head>
 <body>
@@ -287,6 +302,7 @@ body {
 <nav id="nav">
   <a href="#hero" class="active">首页</a>
   <a href="#ch1">认识正弦波</a>
+  <a href="#ch1-epicycle">傅里叶级数</a>
   <a href="#ch2">波形畸变</a>
   <a href="#ch3">谐波源</a>
   <a href="#ch4">谐波合成</a>
@@ -323,6 +339,37 @@ body {
     <div class="card"><div class="card-title">频率 f</div>50 次/秒</div>
     <div class="card"><div class="card-title">峰值 V<sub>p</sub></div>波形最高点</div>
     <div class="card"><div class="card-title">有效值 RMS</div>V<sub>p</sub> / √2</div>
+  </div>
+</section>
+
+<!-- ===== CH1.5: 傅里叶级数 - 旋转矢量叠加 ===== -->
+<section class="section" id="ch1-epicycle">
+  <h2 class="section-title">傅里叶级数 · 旋转矢量叠加</h2>
+  <p class="section-subtitle">任何波形都可以分解为多个不同频率、不同幅值的旋转矢量——傅里叶变换的核心思想</p>
+
+  <div class="card">
+    <p>傅里叶告诉我们：<strong style="color:var(--accent)">任何周期性波形 = 一组不同频率、不同幅值的正弦波之和</strong>。</p>
+    <p>下方左图展示了一组<strong style="color:var(--accent)">旋转矢量</strong>（每个圆代表一个谐波分量），它们的矢量和就是右侧的合成波形。频率越高的矢量转得越快，幅值越大的矢量圆半径越大。</p>
+  </div>
+
+  <div class="canvas-wrap">
+    <span class="canvas-label">傅里叶级数 · 旋转矢量叠加 · 黄色端点轨迹 = 合成波形</span>
+    <canvas id="fourierEpicycleCanvas" width="1060" height="420"></canvas>
+    <div class="controls" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+        <button class="btn preset-btn" data-preset="square" style="border-color:var(--accent)">◼ 方波</button>
+        <button class="btn preset-btn" data-preset="triangle" style="border-color:var(--green)">🔺 三角波</button>
+        <button class="btn preset-btn" data-preset="sawtooth" style="border-color:var(--orange)">⚡ 锯齿波</button>
+        <button class="btn preset-btn" data-preset="clear" style="border-color:var(--red)">✕ 清除</button>
+      </div>
+      <div class="epi-grid">
+        <div><label class="epi-label" style="color:#00BCD4">1次 基波</label><input type="number" id="epiA0" class="epi-input" value="1.00" step="0.01" min="-2" max="2"></div>
+        <div><label class="epi-label" style="color:#EF5350">3次 谐波</label><input type="number" id="epiA1" class="epi-input" value="0.00" step="0.01" min="-2" max="2"></div>
+        <div><label class="epi-label" style="color:#66BB6A">5次 谐波</label><input type="number" id="epiA2" class="epi-input" value="0.00" step="0.01" min="-2" max="2"></div>
+        <div><label class="epi-label" style="color:#AB47BC">7次 谐波</label><input type="number" id="epiA3" class="epi-input" value="0.00" step="0.01" min="-2" max="2"></div>
+        <div><label class="epi-label" style="color:#FFA726">9次 谐波</label><input type="number" id="epiA4" class="epi-input" value="0.00" step="0.01" min="-2" max="2"></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -737,6 +784,194 @@ function drawGrid(ctx, w, h, stepX, stepY, color) {
     ctx.textBaseline = 'middle';
     ctx.fillText(`sin(${deg}°) = ${Math.sin(angle).toFixed(3)}`, sineX + 12, sineDotY);
     ctx.textBaseline = 'alphabetic';
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH1.5: FOURIER EPICYCLE - 旋转矢量叠加
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('fourierEpicycleCanvas', 1060, 420);
+
+  const EPI_CX = 170, EPI_CY = h/2;
+  const EPI_SCALE = 62;
+  const WX0 = 380, WY = h/2;
+  const WW = w - WX0 - 30;
+  const MAX_PTS = 480;
+
+  const orders = [1, 3, 5, 7, 9];
+  const colors = ['#00BCD4','#EF5350','#66BB6A','#AB47BC','#FFA726'];
+  const ids = ['epiA0','epiA1','epiA2','epiA3','epiA4'];
+
+  function getAmps() {
+    return ids.map(id => {
+      const el = document.getElementById(id);
+      return el ? parseFloat(el.value) || 0 : 0;
+    });
+  }
+
+  // Preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = btn.dataset.preset;
+      let v;
+      switch(p) {
+        case 'square':   v = [1, 1/3, 1/5, 1/7, 1/9]; break;
+        case 'triangle': v = [1, -1/9, 1/25, -1/49, 1/81]; break;
+        case 'sawtooth': v = [1, -0.5, 1/3, -0.25, 0.2]; break;
+        case 'clear':    v = [1, 0, 0, 0, 0]; break;
+      }
+      ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.value = v[i].toFixed(3);
+      });
+    });
+  });
+
+  const waveBuf = [];
+  let t = 0;
+
+  function draw() {
+    t += 0.022;
+    ctx.clearRect(0,0,w,h);
+    const amps = getAmps();
+
+    // Grid: waveform area
+    ctx.strokeStyle = 'rgba(26,42,58,0.3)'; ctx.lineWidth = 0.5;
+    for (let x = WX0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for (let y = 0; y < h; y += 30) { ctx.beginPath(); ctx.moveTo(WX0,y); ctx.lineTo(w,y); ctx.stroke(); }
+
+    // Grid: epicycle area
+    ctx.strokeStyle = 'rgba(26,42,58,0.2)';
+    for (let r = EPI_SCALE; r <= EPI_SCALE*2.5; r += EPI_SCALE) {
+      ctx.beginPath(); ctx.arc(EPI_CX, EPI_CY, r, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(EPI_CX-EPI_SCALE*2.5, EPI_CY); ctx.lineTo(EPI_CX+EPI_SCALE*2.5, EPI_CY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(EPI_CX, EPI_CY-EPI_SCALE*2.5); ctx.lineTo(EPI_CX, EPI_CY+EPI_SCALE*2.5); ctx.stroke();
+
+    // Center line for waveform
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(WX0, WY); ctx.lineTo(w, WY); ctx.stroke();
+
+    // --- Compute sum of vectors ---
+    let sumX = EPI_CX, sumY = EPI_CY;
+    for (let i = 0; i < orders.length; i++) {
+      const A = amps[i];
+      if (Math.abs(A) < 0.001) continue;
+      const angle = orders[i] * t;
+      sumX += A * EPI_SCALE * Math.cos(angle);
+      sumY += A * EPI_SCALE * Math.sin(angle);
+    }
+
+    // --- Draw epicycles ---
+    let dx = EPI_CX, dy = EPI_CY;
+    for (let i = 0; i < orders.length; i++) {
+      const A = amps[i];
+      if (Math.abs(A) < 0.001) continue;
+      const angle = orders[i] * t;
+      const R = Math.abs(A) * EPI_SCALE;
+      const nx = dx + A * EPI_SCALE * Math.cos(angle);
+      const ny = dy + A * EPI_SCALE * Math.sin(angle);
+
+      ctx.strokeStyle = colors[i] + '50';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(dx, dy, R, 0, Math.PI*2); ctx.stroke();
+
+      ctx.strokeStyle = colors[i] + '60';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(nx, ny); ctx.stroke();
+
+      ctx.fillStyle = colors[i] + '70';
+      ctx.beginPath(); ctx.arc(dx, dy, 2.5, 0, Math.PI*2); ctx.fill();
+
+      if (R > 15) {
+        ctx.fillStyle = colors[i] + '60';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(orders[i]+'×', dx + R + 4, dy + 3);
+      }
+
+      dx = nx; dy = ny;
+    }
+
+    // Glowing endpoint
+    ctx.shadowBlur = 14; ctx.shadowColor = '#FFEE58';
+    ctx.fillStyle = '#FFEE58';
+    ctx.beginPath(); ctx.arc(sumX, sumY, 4.5, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,238,88,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(sumX, sumY, 9, 0, Math.PI*2); ctx.stroke();
+
+    // Projection lines to waveform
+    const waveDrawX = WX0 + (waveBuf.length / MAX_PTS) * WW;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255,238,88,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sumX, sumY); ctx.lineTo(waveDrawX, sumY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(waveDrawX, WY); ctx.lineTo(waveDrawX, sumY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Record & draw waveform
+    const normY = (sumY - EPI_CY) / EPI_SCALE;
+    waveBuf.push(normY);
+    if (waveBuf.length > MAX_PTS) waveBuf.shift();
+
+    if (waveBuf.length > 1) {
+      ctx.shadowBlur = 8; ctx.shadowColor = '#FFEE58';
+      ctx.strokeStyle = '#FFEE58'; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < waveBuf.length; i++) {
+        const x = WX0 + (i / MAX_PTS) * WW;
+        const y = WY - waveBuf[i] * EPI_SCALE * 0.85;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke(); ctx.shadowBlur = 0;
+
+      ctx.beginPath();
+      for (let i = 0; i < waveBuf.length; i++) {
+        const x = WX0 + (i / MAX_PTS) * WW;
+        const y = WY - waveBuf[i] * EPI_SCALE * 0.85;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.lineTo(WX0 + WW, WY); ctx.lineTo(WX0, WY); ctx.closePath();
+      ctx.fillStyle = 'rgba(255,238,88,0.04)'; ctx.fill();
+    }
+
+    // Current dot on waveform
+    const curY = WY - normY * EPI_SCALE * 0.85;
+    ctx.fillStyle = '#FF6F00';
+    ctx.shadowBlur = 8; ctx.shadowColor = '#FF6F00';
+    ctx.beginPath(); ctx.arc(waveDrawX, curY, 3, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Labels
+    ctx.fillStyle = C.text; ctx.font = '11px sans-serif';
+    ctx.fillText('旋转矢量叠加', EPI_CX-35, 18);
+    ctx.fillText('合成波形  (y = Σ Aₙ·sin(nωt))', WX0 + 8, 18);
+
+    // Harmonic legend
+    let ly = h - 14;
+    ctx.font = '10px sans-serif';
+    for (let i = orders.length-1; i >= 0; i--) {
+      if (Math.abs(amps[i]) > 0.001) {
+        ctx.fillStyle = colors[i];
+        const sign = amps[i] > 0 ? '+' : '';
+        ctx.fillText(`${orders[i]}× ${sign}${amps[i].toFixed(3)}`, 8, ly);
+        ly -= 14;
+      }
+    }
+
+    // THD
+    let harmSq = 0;
+    for (let i = 1; i < amps.length; i++) harmSq += amps[i]*amps[i];
+    const thd = Math.abs(amps[0]) > 0.001 ? Math.sqrt(harmSq) / Math.abs(amps[0]) * 100 : 0;
+    const thdColor = thd < 5 ? '#66BB6A' : thd < 20 ? '#FFA726' : '#EF5350';
+    ctx.fillStyle = thdColor;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`THD: ${thd.toFixed(1)}%`, w-120, 20);
 
     requestAnimationFrame(draw);
   }
