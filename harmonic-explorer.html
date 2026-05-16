@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电力谐波探秘 — 初学者可视化指南</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --card: #1a2332;
+  --border: #2a3a5c;
+  --text: #e8edf5;
+  --dim: #8899bb;
+  --accent: #00BCD4;
+  --accent2: #FF6F00;
+  --blue: #4FC3F7;
+  --red: #EF5350;
+  --green: #66BB6A;
+  --purple: #AB47BC;
+  --orange: #FFA726;
+  --yellow: #FFEE58;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ===== Navigation ===== */
+#nav {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  background: rgba(10,14,26,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  display: flex; align-items: center;
+  height: 56px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#nav::-webkit-scrollbar { display:none; }
+#nav a {
+  color: var(--dim); text-decoration: none;
+  font-size: 13px; font-weight: 500;
+  padding: 16px 14px; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all .25s;
+}
+#nav a:hover, #nav a.active { color: var(--accent); border-color: var(--accent); }
+
+/* ===== Hero ===== */
+#hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 80px 20px 40px;
+  position: relative;
+  overflow: hidden;
+}
+#hero::before {
+  content: ''; position: absolute;
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(0,188,212,0.08) 0%, transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+}
+#hero h1 {
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 12px; position: relative;
+}
+#hero .subtitle {
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  color: var(--dim); max-width: 600px;
+  margin-bottom: 8px; position: relative;
+}
+#hero .tagline {
+  font-size: 0.9rem; color: var(--accent2);
+  position: relative;
+}
+#hero canvas { margin-top: 30px; border-radius: 12px; max-width: 100%; }
+
+/* ===== Sections ===== */
+.section {
+  max-width: 1100px; margin: 0 auto;
+  padding: 80px 20px;
+  position: relative;
+}
+.section-title {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700; margin-bottom: 6px;
+  color: var(--accent);
+}
+.section-subtitle {
+  font-size: 1rem; color: var(--dim);
+  margin-bottom: 40px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  transition: border-color .3s;
+}
+.card:hover { border-color: var(--accent); }
+.card-title {
+  font-size: 1.1rem; font-weight: 600; margin-bottom: 10px;
+  color: var(--accent);
+}
+
+/* ===== Comparison ===== */
+.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; }
+.comp-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px;
+  text-align: center;
+}
+.comp-box h3 { font-size: 1rem; margin-bottom: 6px; }
+.comp-box .examples { font-size: 0.85rem; color: var(--dim); margin-bottom: 12px; }
+.comp-box.linear { border-color: var(--green); }
+.comp-box.linear h3 { color: var(--green); }
+.comp-box.nonlinear { border-color: var(--red); }
+.comp-box.nonlinear h3 { color: var(--red); }
+.comp-box canvas { width: 100%; height: 120px; border-radius: 8px; }
+
+/* ===== Canvas container ===== */
+.canvas-wrap {
+  background: #060a14;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin: 24px 0;
+  position: relative;
+}
+.canvas-wrap canvas { display: block; width: 100%; }
+.canvas-label {
+  position: absolute; top: 12px; left: 16px;
+  font-size: 12px; color: var(--dim);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+/* ===== Controls ===== */
+.controls {
+  background: rgba(0,0,0,0.3);
+  padding: 16px 20px;
+  display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+}
+.controls label { font-size: 13px; color: var(--dim); }
+.controls input[type="range"] {
+  -webkit-appearance: none;
+  height: 4px; border-radius: 2px;
+  background: var(--border);
+  outline: none;
+}
+.controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--accent);
+  cursor: pointer;
+}
+.controls .value { font-family: var(--font-mono); font-size: 13px; color: var(--text); min-width: 30px; }
+
+.btn {
+  padding: 6px 18px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px; cursor: pointer;
+  transition: all .25s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+/* ===== Source Cards (Chapter 3) ===== */
+.source-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+.source-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px; position: relative;
+  overflow: hidden;
+}
+.source-card::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 4px; height: 100%;
+}
+.source-card.switching { border-color: rgba(79,195,247,0.3); }
+.source-card.switching::before { background: var(--blue); }
+.source-card.saturation { border-color: rgba(255,167,38,0.3); }
+.source-card.saturation::before { background: var(--orange); }
+.source-card.arc { border-color: rgba(239,83,80,0.3); }
+.source-card.arc::before { background: var(--red); }
+
+.source-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.source-header .icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.source-header h3 { font-size: 1.15rem; }
+.source-header .badge {
+  padding: 2px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; margin-left: auto;
+}
+.source-card canvas { width: 100%; height: 150px; border-radius: 8px; margin-top: 12px; }
+
+/* ===== Comparison Table ===== */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  margin: 20px 0; font-size: 0.9rem;
+}
+.data-table th {
+  background: rgba(0,188,212,0.1);
+  color: var(--accent); font-weight: 600;
+  padding: 10px 14px; text-align: left;
+  border-bottom: 2px solid var(--accent);
+}
+.data-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.data-table tr:hover td { background: rgba(0,188,212,0.04); }
+
+/* ===== Glossary ===== */
+#glossary { margin-top: 20px; }
+.glossary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.glossary-item {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 20px;
+}
+.glossary-item dt { font-weight: 600; color: var(--accent); font-size: 0.95rem; }
+.glossary-item dd { font-size: 0.85rem; color: var(--dim); margin-top: 4px; }
+
+/* ===== Impacts ===== */
+.impact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.impact-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px;
+}
+.impact-card h3 { color: var(--accent); font-size: 1rem; margin-bottom: 8px; }
+.impact-card canvas { width: 100%; height: 140px; border-radius: 8px; margin-top: 10px; }
+.impact-card .mechanism { font-size: 0.85rem; color: var(--dim); margin: 8px 0; }
+
+/* ===== Sandbox ===== */
+#sandbox .canvas-wrap { min-height: 400px; }
+#sandbox .controls { gap: 16px; }
+
+/* ===== Scroll indicator ===== */
+.scroll-hint {
+  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+  color: var(--dim); font-size: 13px;
+  animation: bounce 2s infinite;
+}
+@keyframes bounce {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .comparison { grid-template-columns: 1fr; }
+  .source-header { flex-wrap: wrap; }
+  .section { padding: 50px 16px; }
+  #nav a { padding: 16px 10px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav id="nav">
+  <a href="#hero" class="active">首页</a>
+  <a href="#ch1">认识正弦波</a>
+  <a href="#ch2">波形畸变</a>
+  <a href="#ch3">谐波源</a>
+  <a href="#ch4">谐波合成</a>
+  <a href="#ch5">影响</a>
+  <a href="#ch6">实验区</a>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <h1>电力谐波探秘</h1>
+  <p class="subtitle">从波形畸变到系统影响——专为零基础设计的可视化指南</p>
+  <p class="tagline">⚡ 谐波是电力系统中的"噪声污染" · 理解它从认识波形开始</p>
+  <canvas id="heroCanvas" width="900" height="240"></canvas>
+  <div class="scroll-hint">↓ 向下滚动开始探索</div>
+</section>
+
+<!-- ===== CH1: 正弦波 ===== -->
+<section class="section" id="ch1">
+  <h2 class="section-title">第一章 · 认识正弦波</h2>
+  <p class="section-subtitle">理想的电是什么样的？</p>
+
+  <div class="card">
+    <p>交流电的电压和电流随时间呈<strong style="color:var(--accent)">正弦规律</strong>变化。
+    在中国，50Hz 意味着每秒完成 50 个完整的正弦周期，每个周期仅 0.02 秒。</p>
+  </div>
+
+  <div class="canvas-wrap" style="height:320px">
+    <span class="canvas-label">正弦波 · 旋转矢量投射</span>
+    <canvas id="sineCanvas" width="1060" height="320"></canvas>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:20px">
+    <div class="card"><div class="card-title">周期 T</div>0.02 秒（50Hz）</div>
+    <div class="card"><div class="card-title">频率 f</div>50 次/秒</div>
+    <div class="card"><div class="card-title">峰值 V<sub>p</sub></div>波形最高点</div>
+    <div class="card"><div class="card-title">有效值 RMS</div>V<sub>p</sub> / √2</div>
+  </div>
+</section>
+
+<!-- ===== CH2: 波形畸变 ===== -->
+<section class="section" id="ch2">
+  <h2 class="section-title">第二章 · 波形变"歪"了</h2>
+  <p class="section-subtitle">同样的正弦电压，不同的负载画出完全不同的电流</p>
+
+  <div class="comparison">
+    <div class="comp-box linear">
+      <h3>✓ 线性负载</h3>
+      <p style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">电流 ∝ 电压 · 波形完美正弦</p>
+      <p class="examples">白炽灯 · 电阻炉 · 电热器</p>
+      <canvas id="linearCanvas" width="480" height="120"></canvas>
+    </div>
+    <div class="comp-box nonlinear">
+      <h3>✗ 非线性负载</h3>
+      <p style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">电流仅在电压峰值附近脉冲导通</p>
+      <p class="examples">开关电源 · 变频器 · 充电器</p>
+      <canvas id="nonlinearCanvas" width="480" height="120"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="border-color:var(--accent2)">
+    <div class="card-title" style="color:var(--accent2)">💡 核心洞察</div>
+    <p>非线性负载内部有整流桥 + 电容。只有当<strong style="color:var(--accent2)">交流电压瞬时值 > 电容电压</strong>时，二极管才导通，出现短促的大电流脉冲。大部分时间电流 = 0。</p>
+    <p style="margin-top:8px;color:var(--orange);">
+      傅里叶变换告诉我们：<strong>脉冲电流 = 基波 + 3次谐波 + 5次谐波 + 7次谐波 + ...</strong>
+    </p>
+  </div>
+
+  <div class="canvas-wrap" style="height:200px">
+    <span class="canvas-label">整流桥导通过程 · 黄色 = 导通区间</span>
+    <canvas id="rectifierCanvas" width="1060" height="200"></canvas>
+  </div>
+</section>
+
+<!-- ===== CH3: 谐波源 ===== -->
+<section class="section" id="ch3">
+  <h2 class="section-title">第三章 · 谁制造了谐波</h2>
+  <p class="section-subtitle">三大谐波源逐一拆解——每种设备产生不同"味道"的谐波</p>
+
+  <div class="source-grid">
+    <!-- 开关型 -->
+    <div class="source-card switching">
+      <div class="source-header">
+        <div class="icon" style="background:rgba(79,195,247,0.15);color:var(--blue)">⬡</div>
+        <h3 style="color:var(--blue)">电力电子开关型</h3>
+        <span class="badge" style="background:rgba(79,195,247,0.15);color:var(--blue)">占比 ~40%</span>
+      </div>
+      <p>利用晶闸管/IGBT 等开关器件进行整流或逆变，电流被"切"成缺角波形。</p>
+      <p style="color:var(--dim);font-size:0.85rem;margin:6px 0">
+        典型设备：变频器、整流器、UPS、开关电源、充电桩
+      </p>
+      <p style="color:var(--accent);font-size:0.9rem"><strong>特征谐波：</strong> h = 6k ± 1（5次、7次、11次、13次...）</p>
+      <canvas id="switchCanvas" width="1060" height="150"></canvas>
+    </div>
+
+    <!-- 饱和型 -->
+    <div class="source-card saturation">
+      <div class="source-header">
+        <div class="icon" style="background:rgba(255,167,38,0.15);color:var(--orange)">⧉</div>
+        <h3 style="color:var(--orange)">铁磁饱和型</h3>
+        <span class="badge" style="background:rgba(255,167,38,0.15);color:var(--orange)">占比 ~15%</span>
+      </div>
+      <p>变压器铁芯的磁化曲线是非线性的。电压偏高时铁芯进入饱和区，励磁电流变成<strong style="color:var(--orange)">尖顶波</strong>。</p>
+      <p style="color:var(--dim);font-size:0.85rem;margin:6px 0">
+        典型设备：电力变压器、电抗器（轻载时更严重）
+      </p>
+      <p style="color:var(--accent);font-size:0.9rem"><strong>特征谐波：</strong> 3次、5次为主，3次最突出</p>
+      <canvas id="satCanvas" width="1060" height="150"></canvas>
+    </div>
+
+    <!-- 电弧型 -->
+    <div class="source-card arc">
+      <div class="source-header">
+        <div class="icon" style="background:rgba(239,83,80,0.15);color:var(--red)">⚡</div>
+        <h3 style="color:var(--red)">电弧型</h3>
+        <span class="badge" style="background:rgba(239,83,80,0.15);color:var(--red)">占比 ~20%</span>
+      </div>
+      <p>电弧的伏安特性高度非线性——起弧后电流很大但电压几乎不变，波形不规则且随机性强。</p>
+      <p style="color:var(--dim);font-size:0.85rem;margin:6px 0">
+        典型设备：电弧炉、电焊机、气体放电灯
+      </p>
+      <p style="color:var(--accent);font-size:0.9rem"><strong>特征谐波：</strong> 2~7次 + 间谐波（非整数倍）</p>
+      <canvas id="arcCanvas" width="1060" height="150"></canvas>
+    </div>
+  </div>
+
+  <!-- 对比表 -->
+  <div class="card" style="margin-top:24px;overflow-x:auto">
+    <div class="card-title">三种谐波源对比</div>
+    <table class="data-table">
+      <thead><tr><th>类型</th><th>典型设备</th><th>特征谐波</th><th>波形形状</th><th>危害特点</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--blue)">开关型</td><td>变频器、整流器</td><td>5,7,11,13… (6k±1)</td><td>方波/阶梯波</td><td>含量大、范围广</td></tr>
+        <tr><td style="color:var(--orange)">饱和型</td><td>变压器</td><td>3,5,7 为主</td><td>尖顶波</td><td>轻载更严重</td></tr>
+        <tr><td style="color:var(--red)">电弧型</td><td>电弧炉</td><td>2~7次 + 间谐波</td><td>不规则/随机</td><td>波动大、引起闪变</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== CH4: 谐波合成 ===== -->
+<section class="section" id="ch4">
+  <h2 class="section-title">第四章 · 谐波是什么</h2>
+  <p class="section-subtitle">从源头到电网——谐波如何累加和传播</p>
+
+  <div class="card">
+    <div class="card-title">🎛️ 谐波合成调音台</div>
+    <p>拖动下方滑块，调节各次谐波的分量，实时观察波形如何从纯正弦变成畸变波形。</p>
+  </div>
+
+  <div class="canvas-wrap">
+    <span class="canvas-label">谐波合成 · 紫色 = 合成波形</span>
+    <canvas id="fourierCanvas" width="1060" height="300"></canvas>
+    <div class="controls">
+      <label>基波 50Hz</label>
+      <input type="range" id="f0" min="0" max="100" value="100">
+      <span class="value" id="v0">100%</span>
+      <label style="margin-left:8px">3次 150Hz</label>
+      <input type="range" id="f3" min="0" max="80" value="0">
+      <span class="value" id="v3">0%</span>
+      <label style="margin-left:8px">5次 250Hz</label>
+      <input type="range" id="f5" min="0" max="60" value="0">
+      <span class="value" id="v5">0%</span>
+      <label style="margin-left:8px">7次 350Hz</label>
+      <input type="range" id="f7" min="0" max="40" value="0">
+      <span class="value" id="v7">0%</span>
+      <span style="margin-left:auto;color:var(--accent2);font-weight:600">THD: <span id="thdValue">0.0</span>%</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <div class="card-title">🔀 谐波累加进电网的过程</div>
+    <p style="margin-bottom:12px">一个电网节点通常挂着多个设备，每个设备都在往电网中注入自己的特征谐波电流。下图模拟了这个过程：</p>
+  </div>
+  <div class="canvas-wrap" style="height:260px">
+    <span class="canvas-label">谐波传播 · 点击设备开关观察波形变化</span>
+    <canvas id="propagationCanvas" width="1060" height="260"></canvas>
+  </div>
+
+  <!-- 相序 -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-title">按相序分类</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">
+      <div style="padding:12px;background:rgba(239,83,80,0.08);border-radius:8px;border-left:3px solid var(--red)">
+        <strong style="color:var(--red)">零序（3k次）</strong>
+        <p style="font-size:0.85rem;color:var(--dim)">3,9,15… 在中性线上叠加，导致过热甚至火灾</p>
+      </div>
+      <div style="padding:12px;background:rgba(102,187,106,0.08);border-radius:8px;border-left:3px solid var(--green)">
+        <strong style="color:var(--green)">正序（3k+1次）</strong>
+        <p style="font-size:0.85rem;color:var(--dim)">1,4,7,10… 产生正向旋转磁场</p>
+      </div>
+      <div style="padding:12px;background:rgba(79,195,247,0.08);border-radius:8px;border-left:3px solid var(--blue)">
+        <strong style="color:var(--blue)">负序（3k-1次）</strong>
+        <p style="font-size:0.85rem;color:var(--dim)">2,5,8,11… 产生反向旋转磁场，电机发热振动</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CH5: 影响 ===== -->
+<section class="section" id="ch5">
+  <h2 class="section-title">第五章 · 谐波的影响</h2>
+  <p class="section-subtitle">谐波电流进入设备后会发生什么？</p>
+
+  <div class="impact-grid">
+    <div class="impact-card">
+      <h3>🔥 变压器过热与噪声</h3>
+      <p class="mechanism">谐波频率高 → 集肤效应增强 → 绕组电阻增大 → I²R 损耗增加；涡流损耗 ∝ f²</p>
+      <canvas id="transformerHeatCanvas" width="400" height="140"></canvas>
+    </div>
+
+    <div class="impact-card">
+      <h3>🔄 电动机的反向刹车</h3>
+      <p class="mechanism">5次谐波（负序）产生反向旋转磁场 → 制动转矩；7次谐波产生超高速正向磁场 → 振动</p>
+      <canvas id="motorEffectCanvas" width="400" height="140"></canvas>
+    </div>
+
+    <div class="impact-card">
+      <h3>⚡ 中性线过载</h3>
+      <p class="mechanism">3次谐波三相中同相位，中线电流 = Ia₃ + Ib₃ + Ic₃ = 3倍</p>
+      <canvas id="neutralCanvas" width="400" height="140"></canvas>
+    </div>
+
+    <div class="impact-card">
+      <h3>📈 电容谐振放大</h3>
+      <p class="mechanism">电容对高频谐波阻抗低（Z=1/2πfC），大量谐波流入，可能形成谐振</p>
+      <canvas id="capacitorCanvas" width="400" height="140"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CH6: 互动实验区 ===== -->
+<section class="section" id="ch6">
+  <h2 class="section-title">第六章 · 互动实验区</h2>
+  <p class="section-subtitle">自由切换场景，探索谐波的奥秘</p>
+
+  <div class="canvas-wrap" id="sandbox">
+    <span class="canvas-label">谐波沙盘 · 示波器 + 频谱分析仪</span>
+    <canvas id="sandboxCanvas" width="1060" height="400"></canvas>
+    <div class="controls">
+      <button class="btn" data-scene="clean">纯净电网</button>
+      <button class="btn" data-scene="vfd">变频器车间</button>
+      <button class="btn" data-scene="transformer">变压器轻载</button>
+      <button class="btn" data-scene="worst">最坏情况</button>
+      <span style="margin-left:auto;display:flex;gap:12px">
+        <label>变频器 <input type="checkbox" id="srcVfd"></label>
+        <label>变压器 <input type="checkbox" id="srcTrafo"></label>
+        <label>电弧炉 <input type="checkbox" id="srcArc"></label>
+      </span>
+    </div>
+  </div>
+
+  <!-- 术语表 -->
+  <div id="glossary" style="margin-top:24px">
+    <h3 style="color:var(--accent);margin-bottom:12px">📖 术语表</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item"><dt>基波</dt><dd>50Hz 的正常交流分量</dd></div>
+      <div class="glossary-item"><dt>h次谐波</dt><dd>频率 = h × 50Hz 的正弦分量</dd></div>
+      <div class="glossary-item"><dt>THD</dt><dd>总谐波失真率，衡量波形畸变程度</dd></div>
+      <div class="glossary-item"><dt>非线性负载</dt><dd>电流不与电压成正比的负载</dd></div>
+      <div class="glossary-item"><dt>特征谐波</dt><dd>特定设备产生的固定次数谐波</dd></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer style="text-align:center;padding:40px 20px;color:var(--dim);font-size:0.85rem;border-top:1px solid var(--border)">
+  电力谐波探秘 · 初学者可视化指南 · 交互式教学工具
+</footer>
+
+<script>
+// ========================================================================
+//  CANVAS ANIMATION ENGINE
+// ========================================================================
+
+function initCanvas(id, w, h) {
+  const c = document.getElementById(id);
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  return { c, ctx, w, h };
+}
+
+// Colors
+const C = {
+  bg: '#060a14',
+  grid: '#1a2a3a',
+  text: '#8899bb',
+  trace: '#00BCD4',
+  trace3: '#EF5350',
+  trace5: '#66BB6A',
+  trace7: '#AB47BC',
+  sum: '#FFEE58',
+  fill: 'rgba(0,188,212,0.08)',
+};
+
+function drawGrid(ctx, w, h, stepX, stepY, color) {
+  ctx.strokeStyle = color || C.grid;
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= w; x += stepX) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+  }
+  for (let y = 0; y <= h; y += stepY) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+}
+
+// ========================================================================
+//  HERO CANVAS - Animated sine wave
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('heroCanvas', 900, 240);
+  let t = 0;
+  function draw() {
+    t += 0.03;
+    ctx.clearRect(0,0,w,h);
+    drawGrid(ctx, w, h, 40, 30, 'rgba(26,42,58,0.4)');
+
+    const amp = 60, cy = h/2;
+    // Draw sine wave with glow
+    ctx.shadowBlur = 12; ctx.shadowColor = '#00BCD4';
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const y = cy + amp * Math.sin((x / w) * Math.PI * 4 + t);
+      x === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = '#00BCD4'; ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Fill below
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const y = cy + amp * Math.sin((x / w) * Math.PI * 4 + t);
+      x === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.lineTo(w, cy); ctx.lineTo(0, cy); ctx.closePath();
+    ctx.fillStyle = 'rgba(0,188,212,0.06)'; ctx.fill();
+
+    // Annotate
+    ctx.fillStyle = '#556677';
+    ctx.font = '12px monospace';
+    ctx.fillText('+U', 8, 30);
+    ctx.fillText('-U', 8, h-20);
+    ctx.fillText('T', w-20, cy-8);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH1: SINE WAVE - Rotating vector projection
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('sineCanvas', 1060, 320);
+  let t = 0;  // continuously increasing
+
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+
+    const cx = 100, cy = h/2, r = 68;
+    const sx0 = 220, sw = w - sx0 - 40, amp = 68;
+    const totalPhase = Math.PI * 6;  // 3 cycles
+    const phase = t % totalPhase;                   // loops every 3 cycles
+    const angle = t % (Math.PI * 2);                // loops for vector
+
+    // === Circle ===
+    ctx.strokeStyle = 'rgba(42,68,100,0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(42,68,100,0.2)'; ctx.lineWidth = 0.5;
+    ctx.setLineDash([3,6]);
+    ctx.beginPath(); ctx.moveTo(cx-r-8, cy); ctx.lineTo(cx+r+8, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy-r-8); ctx.lineTo(cx, cy+r+8); ctx.stroke();
+    ctx.setLineDash([]);
+    for (let a = 0; a < Math.PI*2; a += Math.PI/6) {
+      ctx.fillStyle = 'rgba(60,100,140,0.25)';
+      ctx.beginPath(); ctx.arc(cx + r*Math.cos(a), cy + r*Math.sin(a), 2, 0, Math.PI*2); ctx.fill();
+    }
+
+    // === Vector ===
+    ctx.strokeStyle = 'rgba(255,238,88,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, 16, 0, -angle, true); ctx.stroke();
+
+    const vx = r * Math.cos(angle), vy = -r * Math.sin(angle);
+    ctx.shadowBlur = 14; ctx.shadowColor = '#00BCD4';
+    ctx.strokeStyle = '#00BCD4'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx+vx, cy+vy); ctx.stroke();
+    ctx.shadowBlur = 0;
+    const tipX = cx+vx, tipY = cy+vy;
+    ctx.fillStyle = '#00BCD4';
+    ctx.beginPath(); ctx.arc(tipX, tipY, 5, 0, Math.PI*2); ctx.fill();
+
+    // === Sine Wave (ghost) ===
+    ctx.strokeStyle = 'rgba(0,188,212,0.08)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= sw; i += 2) {
+      const p = (i/sw)*totalPhase;
+      i === 0 ? ctx.moveTo(sx0+i, cy-amp*Math.sin(p)) : ctx.lineTo(sx0+i, cy-amp*Math.sin(p));
+    }
+    ctx.stroke();
+
+    // === Traced portion (continuously advancing, never resets) ===
+    const sineX = sx0 + (phase / totalPhase) * sw;
+    const sineDotY = cy - amp * Math.sin(phase);
+
+    ctx.shadowBlur = 8; ctx.shadowColor = '#00BCD4';
+    ctx.strokeStyle = '#00BCD4'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= sw; i += 2) {
+      const p = (i/sw)*totalPhase;
+      if (p > phase) break;
+      if (!started) { ctx.moveTo(sx0+i, cy-amp*Math.sin(p)); started = true; }
+      else { ctx.lineTo(sx0+i, cy-amp*Math.sin(p)); }
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // === Projection lines ===
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(0,188,212,0.2)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(sineX, tipY); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,238,88,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sineX, cy); ctx.lineTo(sineX, sineDotY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Yellow dot
+    ctx.fillStyle = '#FFEE58';
+    ctx.shadowBlur = 10; ctx.shadowColor = '#FFEE58';
+    ctx.beginPath(); ctx.arc(sineX, sineDotY, 5, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Cycle display
+    const cycle = Math.floor(phase / (Math.PI * 2)) + 1;
+    ctx.fillStyle = 'rgba(255,238,88,0.5)'; ctx.font = '11px sans-serif';
+    ctx.fillText(`第 ${cycle}/3 周期`, sx0 + sw - 110, 18);
+
+    // Labels
+    ctx.fillStyle = C.text; ctx.font = '12px sans-serif';
+    ctx.fillText('旋转矢量', cx-30, cy+r+28);
+    ctx.fillText('正弦波形（3个周期）', sx0+sw/2-50, cy+amp+28);
+
+    ctx.fillStyle = '#FFEE58'; ctx.font = '11px monospace';
+    const deg = ((angle/Math.PI)*180).toFixed(0);
+    ctx.fillText(`θ = ${deg}°`, cx+26, cy-r+14);
+
+    ctx.fillStyle = '#FFEE58'; ctx.font = '11px monospace';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`sin(${deg}°) = ${Math.sin(angle).toFixed(3)}`, sineX + 12, sineDotY);
+    ctx.textBaseline = 'alphabetic';
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH2: LINEAR vs NONLINEAR
+// ========================================================================
+function drawLinearWave(id, t) {
+  const { c, ctx, w, h } = initCanvas(id, 480, 120);
+  ctx.clearRect(0,0,w,h);
+  const cy = h/2, amp = 35;
+
+  ctx.strokeStyle = '#66BB6A'; ctx.lineWidth = 2;
+  ctx.shadowBlur = 6; ctx.shadowColor = '#66BB6A';
+  ctx.beginPath();
+  for (let x = 0; x < w; x += 2) {
+    const y = cy + amp * Math.sin((x/w)*Math.PI*4 + t);
+    x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawNonlinearWave(id, t) {
+  const { c, ctx, w, h } = initCanvas(id, 480, 120);
+  ctx.clearRect(0,0,w,h);
+  const cy = h/2, amp = 35;
+
+  ctx.strokeStyle = '#EF5350'; ctx.lineWidth = 2.5;
+  ctx.shadowBlur = 6; ctx.shadowColor = '#EF5350';
+  ctx.beginPath();
+  for (let x = 0; x < w; x += 2) {
+    const phase = (x/w)*Math.PI*4 + t;
+    const sinVal = Math.sin(phase);
+    // Threshold conduction - only conducts near peaks
+    let y;
+    if (Math.abs(sinVal) > 0.7) {
+      y = cy + amp * 1.3 * sinVal;
+    } else {
+      y = cy;
+    }
+    x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ========================================================================
+//  CH2: RECTIFIER conduction animation
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('rectifierCanvas', 1060, 200);
+  let t = 0;
+  function draw() {
+    t += 0.025;
+    ctx.clearRect(0,0,w,h);
+    const cy = h/2, amp = 50;
+
+    // Voltage sine wave (faint)
+    ctx.strokeStyle = 'rgba(0,188,212,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const y = cy + amp * Math.sin((x/w)*Math.PI*4 + t);
+      x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // Highlight conduction zones
+    for (let x = 0; x < w; x += 2) {
+      const sinVal = Math.sin((x/w)*Math.PI*4 + t);
+      if (Math.abs(sinVal) > 0.7) {
+        ctx.fillStyle = 'rgba(255,111,0,0.15)';
+        ctx.fillRect(x, cy-amp-10, 2, amp*2+20);
+      }
+    }
+
+    // Pulse current
+    ctx.strokeStyle = '#FF6F00'; ctx.lineWidth = 3;
+    ctx.shadowBlur = 10; ctx.shadowColor = '#FF6F00';
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const sinVal = Math.sin((x/w)*Math.PI*4 + t);
+      let y;
+      if (Math.abs(sinVal) > 0.7) {
+        y = cy + amp * 1.3 * Math.sign(sinVal) * Math.pow((Math.abs(sinVal)-0.7)/0.3, 0.5);
+      } else {
+        y = cy;
+      }
+      x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#FF6F00';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('← 导通区间（黄色高亮）', 20, 20);
+    ctx.fillStyle = C.text;
+    ctx.fillText('电流脉冲（橙色）', 20, h-8);
+    ctx.fillStyle = 'rgba(0,188,212,0.4)';
+    ctx.fillText('电压（青色）', w-120, 20);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH3: HARMONIC SOURCE WAVES
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('switchCanvas', 1060, 150);
+  let t = 0;
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+    const cy = h/2, amp = 45;
+    // Square-ish wave approximation (5th order)
+    ctx.strokeStyle = '#4FC3F7'; ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#4FC3F7';
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const p = (x/w)*Math.PI*4 + t;
+      let s = Math.sin(p) + Math.sin(3*p)/3 + Math.sin(5*p)/5;
+      s *= amp / 1.2;
+      x===0 ? ctx.moveTo(x,cy+s) : ctx.lineTo(x,cy+s);
+    }
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    // Spectrum bars
+    const barW = 30, gap = 20, baseX = w - 200, baseY = h - 20;
+    const harms = [
+      { f:'5次', v:0.85, color:'#4FC3F7' },
+      { f:'7次', v:0.6, color:'#66BB6A' },
+      { f:'11次', v:0.4, color:'#AB47BC' },
+      { f:'13次', v:0.3, color:'#FFA726' },
+    ];
+    harms.forEach((h_, i) => {
+      const x = baseX + i*(barW+gap);
+      ctx.fillStyle = h_.color;
+      ctx.fillRect(x, baseY - h_.v*40, barW, h_.v*40);
+      ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+      ctx.fillText(h_.f, x+4, baseY+14);
+      ctx.fillText((h_.v*100|0)+'%', x+2, baseY - h_.v*40 - 4);
+    });
+    ctx.fillStyle = C.text; ctx.font = '11px sans-serif';
+    ctx.fillText('频谱', baseX, baseY+36);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+(function() {
+  const { c, ctx, w, h } = initCanvas('satCanvas', 1060, 150);
+  let t = 0;
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+    const cy = h/2, amp = 45;
+    // Peaked wave (saturation)
+    ctx.strokeStyle = '#FFA726'; ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#FFA726';
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      let s = Math.sin((x/w)*Math.PI*4 + t);
+      // Saturate the peaks
+      if (Math.abs(s) > 0.6) {
+        const excess = Math.abs(s) - 0.6;
+        s = Math.sign(s) * (0.6 + excess * 2.5);
+      }
+      x===0 ? ctx.moveTo(x,cy+s*amp/0.9) : ctx.lineTo(x,cy+s*amp/0.9);
+    }
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    // Spectrum
+    const baseX = w - 180, baseY = h - 20;
+    const harms = [
+      { f:'3次', v:0.9, color:'#FFA726' },
+      { f:'5次', v:0.5, color:'#EF5350' },
+      { f:'7次', v:0.25, color:'#AB47BC' },
+    ];
+    harms.forEach((h_, i) => {
+      const x = baseX + i*50;
+      ctx.fillStyle = h_.color;
+      ctx.fillRect(x, baseY - h_.v*40, 30, h_.v*40);
+      ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+      ctx.fillText(h_.f, x+4, baseY+14);
+      ctx.fillText((h_.v*100|0)+'%', x+2, baseY - h_.v*40 - 4);
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+(function() {
+  const { c, ctx, w, h } = initCanvas('arcCanvas', 1060, 150);
+  let t = 0;
+  function draw() {
+    t += 0.03;
+    ctx.clearRect(0,0,w,h);
+    const cy = h/2, amp = 45;
+    // Irregular arc-like waveform
+    ctx.strokeStyle = '#EF5350'; ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#EF5350';
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 2) {
+      const p = (x/w)*Math.PI*4 + t;
+      const noise = 0.15 * Math.sin(x*0.1 + t*3) + 0.1 * Math.sin(x*0.05 + t*5);
+      let s = Math.sin(p) + 0.25*Math.sin(2*p + t) + 0.2*Math.sin(3*p + t*0.7) + noise;
+      s *= amp / 1.3;
+      x===0 ? ctx.moveTo(x,cy+s) : ctx.lineTo(x,cy+s);
+    }
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    ctx.fillStyle = C.text; ctx.font = '11px sans-serif';
+    ctx.fillText('波形不规则 · 含间谐波', 20, 20);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH4: FOURIER SYNTHESIS - Interactive Mixer
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('fourierCanvas', 1060, 300);
+  const sliders = {
+    f0: document.getElementById('f0'),
+    f3: document.getElementById('f3'),
+    f5: document.getElementById('f5'),
+    f7: document.getElementById('f7'),
+  };
+  const vals = {
+    v0: document.getElementById('v0'),
+    v3: document.getElementById('v3'),
+    v5: document.getElementById('v5'),
+    v7: document.getElementById('v7'),
+  };
+  const thdEl = document.getElementById('thdValue');
+
+  // Harmonic colors for legend
+  const harmColors = ['#00BCD4', '#EF5350', '#66BB6A', '#AB47BC'];
+  const harmLabels = ['基波', '3次', '5次', '7次'];
+
+  function getAmps() {
+    return [
+      +sliders.f0.value / 100,
+      +sliders.f3.value / 100,
+      +sliders.f5.value / 100,
+      +sliders.f7.value / 100,
+    ];
+  }
+
+  function updateSliderDisplay() {
+    vals.v0.textContent = sliders.f0.value + '%';
+    vals.v3.textContent = sliders.f3.value + '%';
+    vals.v5.textContent = sliders.f5.value + '%';
+    vals.v7.textContent = sliders.f7.value + '%';
+  }
+
+  let t = 0;
+  function draw() {
+    t += 0.025;
+    updateSliderDisplay();
+    const amps = getAmps();
+    ctx.clearRect(0,0,w,h);
+
+    const cy = h/2 - 10, amp = 80;
+
+    // Draw individual harmonics
+    const harmBuf = [amps[0]], totalBuf = [];
+    for (let x = 0; x < w; x += 2) {
+      const p = (x/w)*Math.PI*4 + t;
+      const h0 = amps[0] * Math.sin(p);
+      const h3 = amps[1] * Math.sin(3*p) / 3;
+      const h5 = amps[2] * Math.sin(5*p) / 5;
+      const h7 = amps[3] * Math.sin(7*p) / 7;
+      const total = h0 + h3 + h5 + h7;
+
+      // Draw individual harmonics (faint)
+      if (amps[0] > 0.01) {
+        ctx.fillStyle = `rgba(0,188,212,${0.15*amps[0]})`;
+        ctx.fillRect(x, cy, 1, -h0*amp);
+      }
+      if (amps[1] > 0.01) {
+        ctx.fillStyle = `rgba(239,83,80,${0.15*amps[1]})`;
+        ctx.fillRect(x, cy, 1, -h3*amp);
+      }
+      if (amps[2] > 0.01) {
+        ctx.fillStyle = `rgba(102,187,106,${0.15*amps[2]})`;
+        ctx.fillRect(x, cy, 1, -h5*amp);
+      }
+      if (amps[3] > 0.01) {
+        ctx.fillStyle = `rgba(171,71,188,${0.15*amps[3]})`;
+        ctx.fillRect(x, cy, 1, -h7*amp);
+      }
+
+      totalBuf.push({x, y: total});
+    }
+
+    // Center line
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy); ctx.stroke();
+
+    // Draw total (synthesized) waveform
+    ctx.shadowBlur = 10; ctx.shadowColor = '#FFEE58';
+    ctx.strokeStyle = '#FFEE58'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    totalBuf.forEach((p, i) => {
+      const y = cy - p.y * amp;
+      i===0 ? ctx.moveTo(p.x, y) : ctx.lineTo(p.x, y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // THD calculation
+    const fundRms = Math.abs(amps[0]) / Math.SQRT2;
+    const harmRms = Math.sqrt(
+      (Math.abs(amps[1])/3)**2/2 + (Math.abs(amps[2])/5)**2/2 + (Math.abs(amps[3])/7)**2/2
+    );
+    const thd = fundRms > 0.001 ? (harmRms / fundRms * 100) : 0;
+    thdEl.textContent = thd.toFixed(1);
+
+    // THD color
+    const thdColor = thd < 5 ? '#66BB6A' : thd < 20 ? '#FFA726' : '#EF5350';
+    thdEl.style.color = thdColor;
+
+    // Legend
+    let lx = 20, ly = 14;
+    ctx.font = '11px sans-serif';
+    harmColors.forEach((clr, i) => {
+      if (amps[i] > 0.01) {
+        ctx.fillStyle = clr;
+        ctx.fillRect(lx, ly, 12, 3);
+        ctx.fillStyle = C.text;
+        ctx.fillText(harmLabels[i], lx + 16, ly + 4);
+        lx += 54;
+      }
+    });
+    ctx.fillStyle = '#FFEE58';
+    ctx.fillRect(lx, ly, 12, 3);
+    ctx.fillStyle = C.text;
+    ctx.fillText('合成', lx + 16, ly + 4);
+
+    // THD label
+    ctx.fillStyle = thdColor;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(`THD: ${thd.toFixed(1)}%`, w-120, 20);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH4: HARMONIC PROPAGATION
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('propagationCanvas', 1060, 260);
+  let t = 0;
+  const sources = [
+    { label: '变频器', x: 0.25, color: '#4FC3F7', harmonics: [5,7,11], on: true },
+    { label: '变压器', x: 0.5, color: '#FFA726', harmonics: [3,5], on: true },
+    { label: '电弧炉', x: 0.75, color: '#EF5350', harmonics: [2,3,5], on: false },
+  ];
+
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+
+    // Bus line
+    const busY = 50;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(40, busY); ctx.lineTo(w-40, busY); ctx.stroke();
+    ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+    ctx.fillText('10kV 母线', 10, busY-6);
+
+    // Source branches
+    sources.forEach((src, i) => {
+      const sx = src.x * w;
+      // Vertical line
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(sx, busY); ctx.lineTo(sx, h-40); ctx.stroke();
+
+      // Box
+      ctx.fillStyle = src.on ? src.color : '#334';
+      ctx.globalAlpha = src.on ? 1 : 0.3;
+      ctx.fillRect(sx-35, h-70, 70, 30);
+      ctx.strokeStyle = src.on ? src.color : '#556';
+      ctx.lineWidth = 1; ctx.strokeRect(sx-35, h-70, 70, 30);
+      ctx.fillStyle = src.on ? '#000' : '#667';
+      ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(src.label, sx, h-52);
+
+      if (src.on) {
+        // Ripple waves going up
+        src.harmonics.forEach((h_, j) => {
+          const freq = h_ * 2;
+          const phase = t * freq + j * 0.5;
+          const ripples = 2;
+          for (let r = 1; r <= ripples; r++) {
+            const ty = h-70 - (h-70-busY) * ((phase % 1) + r-1) / ripples;
+            if (ty < busY || ty > h-70) return;
+            const radius = 6 + Math.sin(phase)*3;
+            ctx.strokeStyle = src.color;
+            ctx.globalAlpha = Math.max(0, 0.3 - (h-70-ty)/(h-70-busY)*0.2);
+            ctx.beginPath(); ctx.arc(sx, ty, radius, 0, Math.PI*2); ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        });
+
+        // Spectrum at top
+        const barW = 10;
+        src.harmonics.forEach((h_, j) => {
+          const hx = sx - 30 + j * 20;
+          const hv = 0.5 + 0.5 * Math.sin(t * h_ * 0.5 + j);
+          ctx.fillStyle = src.color;
+          ctx.globalAlpha = 0.5;
+          ctx.fillRect(hx, busY - hv*25, barW, hv*25);
+          ctx.fillStyle = C.text; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+          ctx.fillText(h_+'次', hx+barW/2, busY - hv*25 - 3);
+          ctx.globalAlpha = 1;
+        });
+      }
+      ctx.textAlign = 'start';
+      ctx.globalAlpha = 1;
+    });
+
+    // Central waveform at bus
+    ctx.strokeStyle = 'rgba(255,238,88,0.5)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 3) {
+      const phase = (x/w)*Math.PI*6 + t;
+      let sum = Math.sin(phase);
+      sources.forEach(src => {
+        if (src.on) {
+          src.harmonics.forEach(h_ => {
+            sum += 0.15 * Math.sin(h_ * phase + src.harmonics.indexOf(h_)) / src.on;
+          });
+        }
+      });
+      sum *= 8;
+      x===0 ? ctx.moveTo(x, busY+sum) : ctx.lineTo(x, busY+sum);
+    }
+    ctx.stroke();
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH5: IMPACT ANIMATIONS
+// ========================================================================
+
+// 5-1: Transformer heating
+(function() {
+  const { c, ctx, w, h } = initCanvas('transformerHeatCanvas', 400, 140);
+  let t = 0;
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+
+    // Transformer icon (simplified)
+    const cx = w/2, cy = h/2;
+    // Core
+    ctx.fillStyle = '#1a2a3a'; ctx.strokeStyle = '#3a5a7a'; ctx.lineWidth = 1;
+    ctx.fillRect(cx-40, cy+5, 80, 8);
+    ctx.fillRect(cx-40, cy-13, 80, 8);
+    // Coils
+    const heat = 0.4 + 0.3 * Math.sin(t*0.5);
+    ctx.fillStyle = `rgba(255, ${Math.floor(100*(1-heat))}, 0, ${0.3+heat*0.5})`;
+    ctx.fillRect(cx-30, cy-12, 10, 24);
+    ctx.fillRect(cx+20, cy-12, 10, 24);
+    // Windings
+    ctx.strokeStyle = '#FF6F00'; ctx.globalAlpha = 0.3 + heat*0.4;
+    for (let i = 0; i < 6; i++) {
+      const a = t*2 + i*0.5;
+      ctx.beginPath();
+      ctx.arc(cx-25, cy, 8 + Math.sin(a)*3, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Heat waves
+    for (let i = 0; i < 3; i++) {
+      const a = t + i*1.2;
+      ctx.fillStyle = `rgba(255,${Math.floor(80-40*Math.sin(a))},0,${0.1+0.1*Math.sin(a)})`;
+      ctx.beginPath();
+      ctx.arc(cx-25+Math.sin(a+i)*5, cy-25+Math.sin(a*0.7+i)*3, 4+Math.sin(a*2)*2, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+    ctx.fillText('绕组过热 · 绝缘寿命缩短', 10, 18);
+    ctx.fillStyle = '#FF6F00'; ctx.font = '9px sans-serif';
+    ctx.fillText(`谐波电流 → 集肤效应↑ → R↑`, 10, h-8);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// 5-2: Motor effect
+(function() {
+  const { c, ctx, w, h } = initCanvas('motorEffectCanvas', 400, 140);
+  let t = 0;
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+    const cx = w/2, cy = h/2, r = 35;
+
+    // Stator
+    ctx.strokeStyle = '#2a4a6a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r+8, 0, Math.PI*2); ctx.stroke();
+
+    // Rotor
+    ctx.fillStyle = '#1a2a3a';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+
+    // Rotating field (fundamental - forward)
+    const fwd = t * 0.8;
+    // 5th harmonic reverse field
+    const rev5 = -t * 0.8 * 5;
+
+    ctx.strokeStyle = 'rgba(102,187,106,0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI*2; a+=0.1) {
+      const x = cx + r*0.7*Math.cos(a + fwd);
+      const y = cy + r*0.7*Math.sin(a + fwd);
+      a===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // 5th harmonic backward field
+    ctx.strokeStyle = 'rgba(239,83,80,0.3)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI*2; a+=0.1) {
+      const x = cx + r*0.5*Math.cos(a + rev5);
+      const y = cy + r*0.5*Math.sin(a + rev5);
+      a===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // Vibration indicator
+    const vib = Math.sin(t*10) * 3;
+    ctx.strokeStyle = '#EF5350'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx+r+12+vib, cy-5); ctx.lineTo(cx+r+20+vib, cy-5);
+    ctx.moveTo(cx+r+12+vib, cy+5); ctx.lineTo(cx+r+20+vib, cy+5);
+    ctx.stroke();
+    ctx.fillStyle = '#EF5350'; ctx.font = '9px sans-serif';
+    ctx.fillText('↕ 振动', cx+r+20, cy-8);
+
+    ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+    ctx.fillText('5次谐波 → 反向旋转 → 制动+振动', 10, 18);
+    ctx.fillStyle = '#66BB6A'; ctx.font = '9px sans-serif';
+    ctx.fillText('← 基波正转', 10, h-6);
+    ctx.fillStyle = '#EF5350';
+    ctx.fillText('5次反转 →', w-80, h-6);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// 5-3: Neutral overload
+(function() {
+  const { c, ctx, w, h } = initCanvas('neutralCanvas', 400, 140);
+  let t = 0;
+  function draw() {
+    t += 0.025;
+    ctx.clearRect(0,0,w,h);
+    const midX = w/2, topY = 30, botY = h-30;
+
+    // Three phases
+    const colors = ['#4FC3F7','#66BB6A','#FFA726'];
+    const labels = ['A', 'B', 'C'];
+    const offsets = [-80, 0, 80];
+
+    // Lines
+    offsets.forEach((off, i) => {
+      ctx.strokeStyle = `rgba(255,255,255,0.1)`; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(midX+off, topY); ctx.lineTo(midX+off, botY);
+      ctx.stroke();
+
+      // 3rd harmonic sine on each phase
+      ctx.strokeStyle = colors[i]; ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 4; ctx.shadowColor = colors[i];
+      ctx.beginPath();
+      for (let x = midX+off-20; x <= midX+off+20; x+=1) {
+        const p = (x/w)*Math.PI*12 + t;
+        const y = (topY+botY)/2 + 15 * Math.sin(3*p + i*2.1);
+        x===midX+off-20 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.fillStyle = colors[i]; ctx.font = '10px sans-serif';
+      ctx.fillText(labels[i], midX+off-3, topY-6);
+    });
+
+    // Neutral bottom - 3x amplitude
+    ctx.strokeStyle = '#EF5350'; ctx.lineWidth = 2.5;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#EF5350';
+    ctx.beginPath();
+    const nY = botY;
+    for (let x = 0; x < w; x+=2) {
+      const p = (x/w)*Math.PI*12 + t;
+      const sum = Math.sin(3*p) + Math.sin(3*p + 2.1) + Math.sin(3*p + 4.2);
+      const y = nY - 5 - (sum / 3) * 30 + 30;
+      x===0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Neutral line highlight
+    ctx.strokeStyle = '#EF5350'; ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(w/2-100, nY); ctx.lineTo(w/2+100, nY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#EF5350'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('⚠ 中线电流 = A₃ + B₃ + C₃ = 3× 单相3次谐波', w/2, h-4);
+    ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+    ctx.fillText('3次谐波同相位叠加', w/2, 14);
+    ctx.textAlign = 'start';
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// 5-4: Capacitor resonance
+(function() {
+  const { c, ctx, w, h } = initCanvas('capacitorCanvas', 400, 140);
+  let t = 0;
+  function draw() {
+    t += 0.02;
+    ctx.clearRect(0,0,w,h);
+
+    // LC circuit
+    const cx = w/2 - 60, cy = h/2;
+    ctx.strokeStyle = '#2a4a6a'; ctx.lineWidth = 1;
+    // Inductor
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(cx + i*10, cy-20, 6, Math.PI, 0);
+      ctx.stroke();
+    }
+    // Capacitor
+    ctx.beginPath();
+    ctx.moveTo(cx+50, cy-15); ctx.lineTo(cx+50, cy+15);
+    ctx.moveTo(cx+60, cy-15); ctx.lineTo(cx+60, cy+15);
+    ctx.stroke();
+    // Wires
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-20); ctx.lineTo(cx, cy-40);
+    ctx.lineTo(cx+55, cy-40);
+    ctx.moveTo(cx, cy+20); ctx.lineTo(cx, cy+40);
+    ctx.lineTo(cx+55, cy+40);
+    ctx.stroke();
+
+    // Resonant current visualization
+    const freq = 0.5 + 0.4 * Math.sin(t*0.3);
+    const resAmp = 1 / Math.sqrt(Math.pow(1 - freq*freq, 2) + 0.01);
+    const amp = Math.min(resAmp * 20, 50);
+
+    ctx.strokeStyle = '#FF6F00'; ctx.lineWidth = 2;
+    ctx.shadowBlur = 8; ctx.shadowColor = '#FF6F00';
+    ctx.beginPath();
+    for (let x = 0; x < w; x+=2) {
+      const phase = (x/w)*Math.PI*8 + t*freq*2;
+      const y = cy + amp * Math.sin(phase);
+      x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Labels
+    ctx.fillStyle = '#4FC3F7'; ctx.font = '9px sans-serif';
+    ctx.fillText('L', cx+10, cy-45);
+    ctx.fillText('C', cx+50, cy-45);
+    ctx.fillStyle = '#FF6F00';
+    ctx.fillText('谐振！电压放大', cx+50, cy-55);
+    ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+    ctx.fillText('低频时电容阻抗高 → 安全', 10, 18);
+    ctx.fillStyle = '#FF6F00';
+    ctx.fillText('谐振频率附近 → 电流剧烈放大 ⚠', 10, 34);
+
+    // Resonance peak indicator
+    ctx.fillStyle = `rgba(255,111,0,${0.2+0.2*Math.sin(t*2)})`;
+    ctx.beginPath();
+    ctx.arc(cx-60, cy, 5, 0, Math.PI*2);
+    ctx.fill();
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH6: SANDBOX
+// ========================================================================
+(function() {
+  const { c, ctx, w, h } = initCanvas('sandboxCanvas', 1060, 400);
+  const checkboxes = {
+    vfd: document.getElementById('srcVfd'),
+    trafo: document.getElementById('srcTrafo'),
+    arc: document.getElementById('srcArc'),
+  };
+
+  // Scene presets
+  document.querySelectorAll('#sandbox .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const scene = btn.dataset.scene;
+      switch(scene) {
+        case 'clean': checkboxes.vfd.checked = false; checkboxes.trafo.checked = false; checkboxes.arc.checked = false; break;
+        case 'vfd': checkboxes.vfd.checked = true; checkboxes.trafo.checked = false; checkboxes.arc.checked = false; break;
+        case 'transformer': checkboxes.vfd.checked = false; checkboxes.trafo.checked = true; checkboxes.arc.checked = false; break;
+        case 'worst': checkboxes.vfd.checked = true; checkboxes.trafo.checked = true; checkboxes.arc.checked = true; break;
+      }
+      // Highlight active
+      document.querySelectorAll('#sandbox .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  let t = 0;
+  function draw() {
+    t += 0.025;
+    ctx.clearRect(0,0,w,h);
+
+    const cy = h/2 - 20;
+    const marginL = 60, marginR = 60;
+    const plotW = w - marginL - marginR - 220;
+    const spectrumX = w - marginR - 180;
+    const spectrumY = 40;
+    const spectrumH = h - 80;
+
+    // ---------- OSCILLOSCOPE ----------
+    // Grid
+    ctx.strokeStyle = 'rgba(26,42,58,0.6)'; ctx.lineWidth = 0.5;
+    for (let x = marginL; x < marginL+plotW; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, h-20); ctx.stroke();
+    }
+    for (let y = 20; y < h-20; y += 30) {
+      ctx.beginPath(); ctx.moveTo(marginL, y); ctx.lineTo(marginL+plotW, y); ctx.stroke();
+    }
+
+    // Center line
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(marginL, cy); ctx.lineTo(marginL+plotW, cy); ctx.stroke();
+
+    // Generate waveform
+    const amps = [
+      1.0,  // fundamental
+      checkboxes.vfd.checked ? 0.4 : 0,  // 3rd
+      checkboxes.trafo.checked ? 0.5 : 0,  // 5th
+      checkboxes.vfd.checked ? 0.3 : 0,  // 7th
+      checkboxes.arc.checked ? 0.25 : 0,  // 2nd
+      checkboxes.arc.checked ? 0.2 : 0,  // random
+    ];
+
+    ctx.shadowBlur = 8; ctx.shadowColor = '#00BCD4';
+    ctx.strokeStyle = '#00BCD4'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let px = 0; px < plotW; px += 2) {
+      const p = (px/plotW)*Math.PI*4 + t;
+      let val = amps[0] * Math.sin(p)
+        + amps[1] * Math.sin(3*p)/3
+        + amps[2] * Math.sin(5*p)/5
+        + amps[3] * Math.sin(7*p)/7
+        + amps[4] * Math.sin(2*p + t*0.7)/2;
+      if (amps[5] > 0) val += amps[5] * (Math.sin(p*1.3 + t*0.5) + Math.sin(p*2.7 + t*0.3)) * 0.5;
+      const y = cy - val * 55;
+      px===0 ? ctx.moveTo(marginL+px, y) : ctx.lineTo(marginL+px, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // ---------- SPECTRUM ANALYZER ----------
+    const bars = [
+      { f: '基波', v: 100, color: '#00BCD4' },
+      { f: '2次', v: checkboxes.arc.checked ? 25 + 10*Math.sin(t) : 0, color: '#EF5350' },
+      { f: '3次', v: checkboxes.trafo.checked ? 50 : (checkboxes.vfd.checked ? 20 : 0), color: '#FFA726' },
+      { f: '5次', v: checkboxes.vfd.checked ? 40 : (checkboxes.trafo.checked ? 25 : 0), color: '#66BB6A' },
+      { f: '7次', v: checkboxes.vfd.checked ? 30 : 0, color: '#AB47BC' },
+    ];
+
+    // Spectrum background
+    ctx.fillStyle = 'rgba(10,14,26,0.8)'; ctx.strokeStyle = '#1a2a3a';
+    ctx.fillRect(spectrumX-10, spectrumY-10, 200, spectrumH+20);
+    ctx.strokeRect(spectrumX-10, spectrumY-10, 200, spectrumH+20);
+
+    ctx.fillStyle = '#8899bb'; ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('频谱分析', spectrumX + 90, spectrumY + 4);
+    ctx.textAlign = 'start';
+
+    const barW = 28, barGap = 10;
+    const maxH = spectrumH - 50;
+
+    bars.forEach((bar, i) => {
+      const bx = spectrumX + 10 + i*(barW+barGap);
+      const bh = (bar.v / 100) * maxH;
+      ctx.fillStyle = bar.color;
+      ctx.globalAlpha = 0.7 + 0.3 * (bar.v/100);
+      ctx.fillRect(bx, spectrumY+spectrumH-30-bh, barW, bh);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = C.text; ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(bar.f, bx+barW/2, spectrumY+spectrumH-12);
+      if (bar.v > 0) {
+        ctx.fillStyle = bar.color; ctx.font = '9px sans-serif';
+        ctx.fillText((bar.v|0)+'%', bx+barW/2, spectrumY+spectrumH-35-bh);
+      }
+      ctx.textAlign = 'start';
+    });
+
+    // THD
+    let thd = 0;
+    bars.forEach((b, i) => { if (i>0) thd += b.v*b.v; });
+    thd = Math.sqrt(thd);
+
+    const thdColor = thd < 5 ? '#66BB6A' : thd < 20 ? '#FFA726' : '#EF5350';
+    ctx.fillStyle = thdColor;
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`THD: ${thd.toFixed(1)}%`, spectrumX + 90, spectrumY+spectrumH+8);
+    ctx.textAlign = 'start';
+
+    // Waveform label
+    ctx.fillStyle = C.text;
+    ctx.font = '11px sans-serif';
+    ctx.fillText('示波器', marginL + 8, 36);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ========================================================================
+//  CH2: INIT
+// ========================================================================
+let ch2Time = 0;
+(function animateCh2() {
+  ch2Time += 0.03;
+  drawLinearWave('linearCanvas', ch2Time);
+  drawNonlinearWave('nonlinearCanvas', ch2Time);
+  requestAnimationFrame(animateCh2);
+})();
+
+// ========================================================================
+//  NAVIGATION ACTIVE STATE
+// ========================================================================
+(function() {
+  const nav = document.getElementById('nav');
+  const links = nav.querySelectorAll('a');
+  const sections = document.querySelectorAll('.section, #hero');
+
+  function updateNav() {
+    let current = 'hero';
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      if (rect.top <= 200) current = sec.id || 'hero';
+    });
+    links.forEach(a => {
+      const href = a.getAttribute('href').replace('#','');
+      a.classList.toggle('active', href === current);
+    });
+  }
+
+  window.addEventListener('scroll', updateNav);
+  window.addEventListener('load', updateNav);
+
+  // Smooth scroll
+  links.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+})();
+
+// ========================================================================
+//  SANDBOX SCENE INIT - default active
+// ========================================================================
+document.querySelector('#sandbox .btn[data-scene="clean"]')?.classList.add('active');
+</script>
+
+</body>
+</html>

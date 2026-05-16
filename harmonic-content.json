@@ -1,0 +1,222 @@
+{
+  "title": "电力谐波探秘",
+  "subtitle": "从波形畸变到系统影响——初学者的可视化指南",
+  "coreThesis": "谐波是电力系统中的'噪声污染'，理解它从认识波形畸变开始",
+  "primaryColor": "#00BCD4",
+  "accentColor": "#FF6F00",
+  "chapters": [
+    {
+      "id": 1,
+      "title": "认识正弦波",
+      "subtitle": "理想的电是什么样的",
+      "content": [
+        {
+          "type": "text",
+          "data": "交流电的电压和电流随时间呈正弦规律变化。在中国，50Hz意味着每秒完成50个完整的正弦周期。"
+        },
+        {
+          "type": "concept",
+          "title": "正弦波的关键参数",
+          "items": [
+            "周期 T = 0.02s（50Hz系统）",
+            "峰值：波形最高点",
+            "有效值 RMS = 峰值 / √2",
+            "频率 f = 1/T = 50Hz"
+          ]
+        },
+        {
+          "type": "visualization",
+          "id": "sine-wave-basic",
+          "description": "旋转矢量投射出正弦波"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "波形变歪了",
+      "subtitle": "非线性负载让电流不再听话",
+      "content": [
+        {
+          "type": "text",
+          "data": "同样的正弦电压加在不同负载上，电流波形截然不同。"
+        },
+        {
+          "type": "comparison",
+          "title": "线性负载 vs 非线性负载",
+          "left": {
+            "name": "线性负载",
+            "description": "电流 ∝ 电压，波形完美正弦",
+            "examples": "白炽灯、电阻炉、电热器",
+            "circuit": "电阻R"
+          },
+          "right": {
+            "name": "非线性负载",
+            "description": "电流只在电压峰值附近脉冲导通",
+            "examples": "开关电源、变频器、充电器",
+            "circuit": "整流桥 + 电容 + 负载"
+          }
+        },
+        {
+          "type": "visualization",
+          "id": "linear-vs-nonlinear",
+          "description": "并排对比两种负载的电流波形，展示导通角与脉冲电流"
+        },
+        {
+          "type": "key-insight",
+          "title": "为什么脉冲电流 = 谐波？",
+          "text": "傅里叶变换告诉我们：任何周期性波形都可以分解为一系列不同频率的正弦波之和。脉冲电流 = 基波正弦 + 3次谐波 + 5次谐波 + 7次谐波 + ..."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "谁制造了谐波",
+      "subtitle": "三大谐波源逐一拆解",
+      "sources": [
+        {
+          "type": "switching",
+          "name": "电力电子开关型",
+          "icon": "rectifier",
+          "percentage": "40%",
+          "description": "利用晶闸管/IGBT等开关器件进行整流或逆变，电流被'切'成缺角波形",
+          "devices": "变频器(VFD)、整流器、UPS、开关电源、充电桩、光伏逆变器",
+          "mechanism": "三相6脉波整流器中，6个管子轮流导通，每个导通60°，相电流呈阶梯方波",
+          "characteristic_harmonics": "h = 6k ± 1（5次、7次、11次、13次...）",
+          "visualization_id": "rectifier-harmonics",
+          "waveform_shape": "方波/阶梯波",
+          "subtypes": [
+            {
+              "name": "6脉波整流",
+              "harmonics": "5, 7, 11, 13...",
+              "thd": "~30%"
+            },
+            {
+              "name": "12脉波整流",
+              "harmonics": "11, 13, 23, 25...",
+              "thd": "~15%"
+            },
+            {
+              "name": "单相整流（电容滤波）",
+              "harmonics": "3次尤为严重",
+              "thd": ">80%"
+            }
+          ]
+        },
+        {
+          "type": "saturation",
+          "name": "铁磁饱和型",
+          "icon": "transformer",
+          "percentage": "~15%",
+          "description": "变压器铁芯的磁化曲线是非线性的，进入饱和区后励磁电流畸变",
+          "devices": "电力变压器、电抗器、发电机",
+          "mechanism": "正常电压下铁芯工作在线性区→电流正弦；电压偏高/轻载时铁芯饱和→同电压增量需更大励磁电流→电流波形变尖顶",
+          "characteristic_harmonics": "3次、5次为主，3次最突出",
+          "visualization_id": "transformer-saturation",
+          "waveform_shape": "尖顶波",
+          "note": "变压器在轻载时电压偏高更容易饱和，谐波更明显"
+        },
+        {
+          "type": "arc",
+          "name": "电弧型",
+          "icon": "furnace",
+          "percentage": "~20%",
+          "description": "电弧的伏安特性高度非线性，电流波形不规则且不对称",
+          "devices": "电弧炉(EAF)、电焊机、气体放电灯",
+          "mechanism": "起弧电压~70V，之后电流可很大但电压基本不变→电流波形不规则、随机性强",
+          "characteristic_harmonics": "2~7次低次谐波 + 间谐波（非整数倍）",
+          "visualization_id": "arc-furnace",
+          "waveform_shape": "不规则/随机",
+          "specials": [
+            "产生连续频谱的谐波",
+            "2次谐波可达基波8%",
+            "7次谐波可达20%，最大45%",
+            "引起电压闪变"
+          ]
+        }
+      ],
+      "comparison_table": {
+        "headers": ["类型", "典型设备", "特征谐波", "波形形状", "危害特点"],
+        "rows": [
+          ["开关型", "变频器、整流器", "5,7,11,13... (6k±1)", "方波/尖脉冲", "含量大、范围广"],
+          ["饱和型", "变压器", "3,5,7为主", "尖顶波", "轻载更严重"],
+          ["电弧型", "电弧炉", "2~7次+间谐波", "不规则", "波动大、引起闪变"]
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "title": "谐波是什么",
+      "subtitle": "从源头到电网的'污染'扩散",
+      "content": [
+        {
+          "type": "text",
+          "data": "了解了三大谐波源之后，来看看谐波如何从各个设备累加到电网中。"
+        },
+        {
+          "type": "visualization",
+          "id": "fourier-synthesis",
+          "description": "交互式谐波调音台：拖动滑块调节各次谐波幅值，实时合成波形"
+        },
+        {
+          "type": "visualization",
+          "id": "harmonic-propagation",
+          "description": "多设备共同注入谐波的电网场景动画"
+        },
+        {
+          "type": "concept",
+          "title": "按相序分类",
+          "items": [
+            "3k次谐波（3,9,15...）→ 零序 → 中性线叠加，导致过热",
+            "3k+1次谐波（1,4,7,10...）→ 正序 → 正向旋转磁场",
+            "3k-1次谐波（2,5,8,11...）→ 负序 → 反向旋转磁场，电机发热振动"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "谐波的影响",
+      "subtitle": "设备们'遭殃'了",
+      "impacts": [
+        {
+          "title": "变压器过热与噪声",
+          "mechanism": "谐波频率高→集肤效应增强→绕组电阻增大→I²R损耗增加；涡流损耗∝f²",
+          "visualization_id": "transformer-heating",
+          "effect": "温度升高、绝缘寿命缩短、嗡嗡声变尖利"
+        },
+        {
+          "title": "电动机的反向刹车",
+          "mechanism": "5次谐波（负序）产生反向旋转磁场→制动转矩；7次谐波（正序）产生7倍速正向磁场→高频振动",
+          "visualization_id": "motor-effect",
+          "effect": "电机发热、振动、转矩脉动、效率下降"
+        },
+        {
+          "title": "中性线过载",
+          "mechanism": "3次谐波在三相中同相位，中线电流 = Ia3 + Ib3 + Ic3 = 3倍（正常时中线≈0）",
+          "visualization_id": "neutral-overload",
+          "effect": "中线电流可超相线电流，引发火灾隐患"
+        },
+        {
+          "title": "电容谐振放大",
+          "mechanism": "电容对高频谐波阻抗低（Z=1/2πfC），大量谐波电流流入，可能形成谐振放大",
+          "visualization_id": "capacitor-resonance",
+          "effect": "电压/电流剧烈放大，设备烧毁"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "互动实验区",
+      "subtitle": "自由探索谐波的世界",
+      "type": "sandbox",
+      "description": "一个完整的谐波合成沙盘，自由开关不同谐波源，观察波形和频谱变化"
+    }
+  ],
+  "glossary": [
+    {"term": "基波", "definition": "50Hz的正常交流分量"},
+    {"term": "h次谐波", "definition": "频率 = h × 50Hz 的正弦分量"},
+    {"term": "THD", "definition": "总谐波失真率，衡量波形畸变程度"},
+    {"term": "非线性负载", "definition": "电流不与电压成正比的负载"},
+    {"term": "特征谐波", "definition": "特定设备产生的固定次数谐波"}
+  ]
+}
